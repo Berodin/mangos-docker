@@ -1,4 +1,4 @@
-FROM mysql:5.7
+FROM mysql:8.2
 MAINTAINER Stephen SORRIAUX <stephen.sorriaux@gmail.com>
 EXPOSE 3306
 ARG MANGOS_DATABASE_VERSION=master
