@@ -1,7 +1,7 @@
-FROM gcc:7.4.0 as builder
+FROM gcc:12.3.0 as builder
 ARG MANGOS_SERVER_VERSION=master
 ARG THREAD_COUNT="-j4"
-ARG CMAKE_VERSION="3.14.5"
+ARG CMAKE_VERSION="3.22.1"
 
 RUN apt-get update -qq && \
     apt-get install openssl libssl-dev -y && \
