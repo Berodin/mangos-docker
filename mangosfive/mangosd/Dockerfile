@@ -1,7 +1,7 @@
-FROM gcc:7.4.0 as builder
+FROM gcc:12.3.0 as builder
 ARG MANGOS_SERVER_VERSION=master
 ARG THREAD_COUNT="-j4"
-ARG CMAKE_VERSION="3.14.5"
+ARG CMAKE_VERSION="3.22.1"
 
 RUN apt-get update -qq && \
     apt-get install openssl libssl-dev -y && \
@@ -13,7 +13,7 @@ RUN apt-get update -qq && \
     make ${THREAD_COUNT} && \
     make install ${THREAD_COUNT}
 
-FROM debian:10
+FROM ubuntu:18.04
 MAINTAINER Stephen SORRIAUX <stephen.sorriaux@gmail.com>
 EXPOSE 8085
 ENV LOGIN_DATABASE_INFO=127.0.0.1;3306;root;mangos;realmd
