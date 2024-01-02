@@ -1,6 +1,6 @@
 FROM gcc:latest as builder
 ARG MANGOS_SERVER_VERSION=master
-ARG THREAD_COUNT="-j4"
+ARG THREAD_COUNT="-j6"
 ARG CMAKE_VERSION="3.28.1"
 ENV GIT_HTTP_LOW_SPEED_LIMIT 0
 ENV GIT_HTTP_TRANSFER_TIMEOUT 1200
@@ -37,13 +37,12 @@ WORKDIR /etc/mangos/
 COPY --from=builder /server/install/bin ./bin
 COPY --from=builder /server/install/etc ./conf
 RUN apt-get update && \
-    apt-get install wget libmariadbclient-dev libmariadbd19 libmariadb3 libssl-dev -y && \
-    ln -s /usr/lib/x86_64-linux-gnu/libmariadbclient.so /usr/lib/x86_64-linux-gnu/libmariadbclient.so.18 && \
+    apt-get install wget libstdc++6 libmariadb-dev libmariadb-dev-compat libmariadbd19 libmariadb3 libssl-dev -y && \
     useradd -ms /bin/bash realm && \
-    wget https://raw.githubusercontent.com/StephenSorriaux/mangos-docker/master/launch_realmd.sh && \
+    wget https://raw.githubusercontent.com/Berodin/mangos-docker/master/launch_realmd.sh && \
     chmod -R a+x . && \
     mv conf/realmd.conf.dist conf/realmd.conf && \
-    sed -i 's/^LoginDatabaseInfo      =.*$/LoginDatabaseInfo      = LOGIN_DATABASE_INFO/' conf/realmd.conf && \
+    sed -i 's|^LoginDatabaseInfo            =.*$|LoginDatabaseInfo            = LOGIN_DATABASE_INFO|' conf/realmd.conf && \
     chown -R realm:realm . && \
     rm -rf /var/lib/apt/lists/*
 USER realm
