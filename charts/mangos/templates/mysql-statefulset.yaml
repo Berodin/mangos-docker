@@ -68,7 +68,8 @@ spec:
   - metadata:
       name: data
     spec:
-      accessModes: ["ReadWriteOnce"]
+      accessModes: [ "{{ .Values.mysql.persistentVolume.accessMode }}" ]
       resources:
         requests:
-          storage: {{ .Values.mysql.storage }}
+          storage: "{{ .Values.mysql.persistentVolume.size }}"
+      volumeName: "{{ .Values.mysql.persistentVolume.existingClaimName }}"
