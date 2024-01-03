@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: {{ .Chart.Name }}-world
-          image: "{{ template "repository.world" . }}:{{ .Values.world.image.tag }}"
+          image: "{{ .Values.world.image.repository }}:{{ .Values.world.image.tag }}"
           imagePullPolicy: {{ .Values.world.image.pullPolicy }}
           env:
             - name: LOGIN_DATABASE_INFO
