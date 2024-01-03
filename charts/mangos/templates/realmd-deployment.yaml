@@ -22,7 +22,7 @@ spec:
       {{- if .Values.realmd.initContainer.enabled }}
       initContainers:
         - name: wait-for-db
-          image: appropriate/curl
+          image: curlimages/curl:latest
           command: ['sh', '-c', 'until curl -s {{ template "chart.fullname" . }}-mysql-service:3306; do echo waiting for db; sleep 2; done;']
       {{- end }}
       containers:
