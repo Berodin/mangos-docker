@@ -34,8 +34,9 @@ spec:
             - name: mysql
               containerPort: 3306
           volumeMounts:
-            - name: mysql-data
+            - name: data
               mountPath: /var/lib/mysql
+              subPath: mysql
           livenessProbe:
             tcpSocket:
               port: 3306
@@ -50,10 +51,6 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 20
           resources:
-        volumes:
-        - name: mysql-data
-          persistentVolumeClaim:
-            claimName: {{ .Values.mysql.persistentVolume.existingClaimName }}
 {{ toYaml .Values.mysql.resources | indent 12 }}
     {{- with .Values.mysql.nodeSelector }}
       nodeSelector:
@@ -67,3 +64,7 @@ spec:
       tolerations:
 {{ toYaml . | indent 8 }}
     {{- end }}
+      volumes:
+      - name: mysql-data
+        persistentVolumeClaim:
+          claimName: {{ .Values.mysql.persistentVolume.existingClaimName }}
