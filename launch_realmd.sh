@@ -36,11 +36,12 @@ sed -i "s/LOGIN_DATABASE_INFO/$LOGIN_DATABASE_INFO/g" $CONFIGS/realmd.conf
 echo "Contents of realmd.conf:" >> /tmp/realmd_log.txt
 cat $CONFIGS/realmd.conf >> /tmp/realmd_log.txt
 
-# Start the realmd service
-${BINDIR}/realmd -c $CONFIGS/realmd.conf
-
 # Keep the script running
 while true; do
     sleep 60
     echo "Keeping the container alive for log inspection..."
 done
+
+# Start the realmd service
+${BINDIR}/realmd -c $CONFIGS/realmd.conf
+
