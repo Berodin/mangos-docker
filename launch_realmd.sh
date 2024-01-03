@@ -26,7 +26,21 @@ if [ -f /realmdconf/realmd.conf ]; then
 	CONFIGS=/realmdconf
 fi
 
+# Log the value of LOGIN_DATABASE_INFO
+echo "LOGIN_DATABASE_INFO: $LOGIN_DATABASE_INFO" >> /tmp/realmd_log.txt
+
 # populate template with env vars
 sed -i "s/LOGIN_DATABASE_INFO/$LOGIN_DATABASE_INFO/g" $CONFIGS/realmd.conf
 
+# Log the contents of the configuration file
+echo "Contents of realmd.conf:" >> /tmp/realmd_log.txt
+cat $CONFIGS/realmd.conf >> /tmp/realmd_log.txt
+
+# Start the realmd service
 ${BINDIR}/realmd -c $CONFIGS/realmd.conf
+
+# Keep the script running
+while true; do
+    sleep 60
+    echo "Keeping the container alive for log inspection..."
+done
