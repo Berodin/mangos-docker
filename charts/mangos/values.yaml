@@ -75,7 +75,7 @@ mysql:
   persistentVolume:
     enabled: false
     existingClaimName: ""
-    storage: 10Gi
+    size: 10Gi
   image:
     tag: latest
     pullPolicy: IfNotPresent
