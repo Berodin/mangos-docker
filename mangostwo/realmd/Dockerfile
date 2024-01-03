@@ -1,4 +1,4 @@
-FROM gcc:12.3.0 as builder
+FROM arm64v8/gcc:12.3.0 as builder
 ARG MANGOS_SERVER_VERSION=master
 ARG THREAD_COUNT="-j6"
 ARG CMAKE_VERSION="3.22.1"
@@ -24,28 +24,22 @@ RUN cd /server && \
     git submodule update --init --recursive || \
     (echo "Retrying git submodule update..." && sleep 30 && git submodule update --init --recursive)
 
-# Build the project
 RUN cd /server && \
     cmake . -DBUILD_MANGOSD=No -DBUILD_TOOLS=No -DCONF_INSTALL_DIR=/server/install/etc/ && \
     make ${THREAD_COUNT} && \
     make install ${THREAD_COUNT}
 
-FROM ubuntu:22.04
+FROM arm64v8/gcc:12.3.0
 EXPOSE 3724
-ENV LOGIN_DATABASE_INFO=127.0.0.1;3306;root;mangos;realmd
 WORKDIR /etc/mangos/
 
-# Installieren Sie benötigte Abhängigkeiten, das GCC 12 Repository und wget
 RUN apt-get update && \
-    apt-get install -y software-properties-common wget && \
-    add-apt-repository ppa:ubuntu-toolchain-r/test && \
-    apt-get update && \
-    apt-get install -y gcc-12 g++-12 libstdc++6 libmariadb-dev libmariadb-dev-compat libmariadbd19 libmariadb3 libssl-dev
+    apt-get install -y software-properties-common wget libmariadb-dev libmariadb-dev-compat libmariadbd19 libmariadb3 libssl-dev
 
-# Installieren Sie die neueste Version von libstdc++6
-RUN apt-get install --only-upgrade libstdc++6
+COPY --from=builder /usr/lib/aarch64-linux-gnu/libstdc++.so.6 /usr/lib/aarch64-linux-gnu/libstdc++.so.6
 
-# Kopieren Sie die kompilierten Binärdateien und Konfigurationsdateien vom Builder
+RUN ldconfig
+
 COPY --from=builder /server/install/bin ./bin
 COPY --from=builder /server/install/etc ./conf
 
@@ -57,6 +51,5 @@ RUN useradd -ms /bin/bash realm && \
     chown -R realm:realm . && \
     rm -rf /var/lib/apt/lists/*
 
-CMD ["tail", "-f", "/dev/null"]
-#USER realm
-#CMD ["./launch_realmd.sh"]
+USER realm
+CMD ["./launch_realmd.sh"]
