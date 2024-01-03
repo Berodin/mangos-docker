@@ -35,15 +35,15 @@ EXPOSE 3724
 ENV LOGIN_DATABASE_INFO=127.0.0.1;3306;root;mangos;realmd
 WORKDIR /etc/mangos/
 
-# Installieren Sie benötigte Abhängigkeiten und fügen Sie das GCC 12 Repository hinzu
+# Installieren Sie benötigte Abhängigkeiten, das GCC 12 Repository und wget
 RUN apt-get update && \
-    apt-get install -y software-properties-common && \
+    apt-get install -y software-properties-common wget && \
     add-apt-repository ppa:ubuntu-toolchain-r/test && \
     apt-get update && \
-    apt-get install -y gcc-12 g++-12 libstdc++6 libmariadb-dev libmariadb-dev-compat libmariadbd19 libmariadb3 libssl-dev wget
+    apt-get install -y gcc-12 g++-12 libstdc++6 libmariadb-dev libmariadb-dev-compat libmariadbd19 libmariadb3 libssl-dev
 
-# Setzen Sie GCC 12 als Standardcompiler
-RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 60 --slave /usr/bin/g++ g++ /usr/bin/g++-12
+# Installieren Sie die neueste Version von libstdc++6
+RUN apt-get install --only-upgrade libstdc++6
 
 # Kopieren Sie die kompilierten Binärdateien und Konfigurationsdateien vom Builder
 COPY --from=builder /server/install/bin ./bin
@@ -56,5 +56,7 @@ RUN useradd -ms /bin/bash realm && \
     sed -i 's|^LoginDatabaseInfo            =.*$|LoginDatabaseInfo            = LOGIN_DATABASE_INFO|' conf/realmd.conf && \
     chown -R realm:realm . && \
     rm -rf /var/lib/apt/lists/*
-USER realm
-CMD ["./launch_realmd.sh"]
+
+CMD ["tail", "-f", "/dev/null"]
+#USER realm
+#CMD ["./launch_realmd.sh"]
