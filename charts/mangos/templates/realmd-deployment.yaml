@@ -19,6 +19,12 @@ spec:
         app: {{ template "chart.name" . }}-realmd
         release: {{ .Release.Name }}
     spec:
+      {{- if .Values.realmd.initContainer.enabled }}
+      initContainers:
+        - name: wait-for-db
+          image: appropriate/curl
+          command: ['sh', '-c', 'until curl -s mysql:3306; do echo waiting for db; sleep 2; done;']
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}-realmd
           image: "{{ .Values.realmd.image.repository }}:{{ .Values.realmd.image.tag }}"
