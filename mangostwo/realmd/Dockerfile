@@ -34,11 +34,22 @@ FROM ubuntu:22.04
 EXPOSE 3724
 ENV LOGIN_DATABASE_INFO=127.0.0.1;3306;root;mangos;realmd
 WORKDIR /etc/mangos/
+
+# Installieren Sie benötigte Abhängigkeiten und fügen Sie das GCC 12 Repository hinzu
+RUN apt-get update && \
+    apt-get install -y software-properties-common && \
+    add-apt-repository ppa:ubuntu-toolchain-r/test && \
+    apt-get update && \
+    apt-get install -y gcc-12 g++-12 libstdc++6 libmariadb-dev libmariadb-dev-compat libmariadbd19 libmariadb3 libssl-dev wget
+
+# Setzen Sie GCC 12 als Standardcompiler
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 60 --slave /usr/bin/g++ g++ /usr/bin/g++-12
+
+# Kopieren Sie die kompilierten Binärdateien und Konfigurationsdateien vom Builder
 COPY --from=builder /server/install/bin ./bin
 COPY --from=builder /server/install/etc ./conf
-RUN apt-get update && \
-    apt-get install wget libstdc++6 libmariadb-dev libmariadb-dev-compat libmariadbd19 libmariadb3 libssl-dev -y && \
-    useradd -ms /bin/bash realm && \
+
+RUN useradd -ms /bin/bash realm && \
     wget https://raw.githubusercontent.com/Berodin/mangos-docker/master/launch_realmd.sh && \
     chmod -R a+x . && \
     mv conf/realmd.conf.dist conf/realmd.conf && \
