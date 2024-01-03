@@ -76,6 +76,7 @@ mysql:
     enabled: false
     existingClaimName: ""
     size: 10Gi
+    accessModes: ""
   image:
     tag: latest
     pullPolicy: IfNotPresent
