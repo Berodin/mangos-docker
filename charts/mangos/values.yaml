@@ -72,11 +72,10 @@ mysql:
   replicaCount: 1
 
   rootPassword: mangos
-
-  storage: 10Gi
   persistentVolume:
     enabled: false
     existingClaimName: ""
+    storage: 10Gi
   image:
     tag: latest
     pullPolicy: IfNotPresent
