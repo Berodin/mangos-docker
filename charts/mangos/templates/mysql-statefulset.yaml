@@ -34,9 +34,8 @@ spec:
             - name: mysql
               containerPort: 3306
           volumeMounts:
-            - name: data
+            - name: mysql-data
               mountPath: /var/lib/mysql
-              subPath: mysql
           livenessProbe:
             tcpSocket:
               port: 3306
@@ -64,12 +63,7 @@ spec:
       tolerations:
 {{ toYaml . | indent 8 }}
     {{- end }}
-  volumeClaimTemplates:
-  - metadata:
-      name: data
-    spec:
-      accessModes: [ "{{ .Values.mysql.persistentVolume.accessMode }}" ]
-      resources:
-        requests:
-          storage: "{{ .Values.mysql.persistentVolume.size }}"
-      volumeName: "{{ .Values.mysql.persistentVolume.existingClaimName }}"
+  volumes:
+  - name: mysql-data
+    persistentVolumeClaim:
+      claimName: {{ .Values.mysql.persistentVolume.existingClaimName }}
