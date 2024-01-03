@@ -38,6 +38,7 @@ spec:
           ports:
             - name: "mangos-realmd"
               containerPort: 3724
+          command: 
           livenessProbe:
             tcpSocket:
               port: 3724
