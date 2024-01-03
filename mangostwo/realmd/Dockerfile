@@ -41,7 +41,6 @@ RUN useradd -ms /bin/bash realm && \
     wget https://raw.githubusercontent.com/Berodin/mangos-docker/master/launch_realmd.sh && \
     chmod -R a+x . && \
     mv conf/realmd.conf.dist conf/realmd.conf && \
-    sed -i 's|^LoginDatabaseInfo            =.*$|LoginDatabaseInfo            = LOGIN_DATABASE_INFO|' conf/realmd.conf && \
     chown -R realm:realm .
 
 USER realm
