@@ -34,7 +34,7 @@ spec:
             - name: mysql
               containerPort: 3306
           volumeMounts:
-            - name: data
+            - name: mysql-data
               mountPath: /var/lib/mysql
               subPath: mysql
           livenessProbe:
