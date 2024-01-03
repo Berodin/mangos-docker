@@ -63,7 +63,12 @@ spec:
       tolerations:
 {{ toYaml . | indent 8 }}
     {{- end }}
-  volumes:
-  - name: mysql-data
-    persistentVolumeClaim:
-      claimName: {{ .Values.mysql.persistentVolume.existingClaimName }}
+  volumeClaimTemplates:
+  - metadata:
+      name: mysql-data
+    spec:
+      accessModes: [ "{{ .Values.mysql.persistentVolume.accessMode }}" ]
+      resources:
+        requests:
+          storage: "{{ .Values.mysql.persistentVolume.size }}"
+      volumeName: "{{ .Values.mysql.persistentVolume.existingClaimName }}"
