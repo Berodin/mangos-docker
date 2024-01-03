@@ -11,7 +11,7 @@ spec:
   type: {{ .Values.mysql.service.type }}
   ports:
     - port: {{ .Values.mysql.service.port }}
-      targetPort: 3306
+      targetPort: mysql
       protocol: TCP
       name: mysql
   selector:
