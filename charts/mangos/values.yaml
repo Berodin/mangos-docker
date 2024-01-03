@@ -13,6 +13,8 @@ wowVersion: 0
 
 # Realm/auth server settings
 realmd:
+  initContainer: 
+    enabled: false
   replicaCount: 1
 
   image:
@@ -36,6 +38,8 @@ realmd:
 
 # World server settings
 world:
+  initContainer: 
+    enabled: false
   replicaCount: 1
 
   image:

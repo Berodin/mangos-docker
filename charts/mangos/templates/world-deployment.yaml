@@ -19,6 +19,15 @@ spec:
         app: {{ template "chart.name" . }}-world
         release: {{ .Release.Name }}
     spec:
+      {{- if .Values.world.initContainer.enabled }}
+      initContainers:
+        - name: wait-for-db
+          image: appropriate/curl
+          command: ['sh', '-c', 'until curl -s mysql:3306; do echo waiting for db; sleep 2; done;']
+        - name: wait-for-realmd
+          image: appropriate/curl
+          command: ['sh', '-c', 'until curl -s realmd:3724; do echo waiting for realmd; sleep 2; done;']
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}-world
           image: "{{ .Values.world.image.repository }}:{{ .Values.world.image.tag }}"
