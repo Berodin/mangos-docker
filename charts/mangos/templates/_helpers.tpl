@@ -32,25 +32,6 @@ Create chart name and version as used by the chart label.
 {{- end -}}
 
 {{/*
-Create repository name base
-*/}}
-{{- define "repository.base" }}
-{{- if eq (.Values.wowVersion | int) 0 -}}
-ssorriaux/mangoszero
-{{- else if eq (.Values.wowVersion | int) 1 -}}
-ssorriaux/mangosone
-{{- else if eq (.Values.wowVersion | int) 2 -}}
-ssorriaux/mangostwo
-{{- else if eq (.Values.wowVersion | int) 3 -}}
-ssorriaux/mangosthree
-{{- else if eq (.Values.wowVersion | int) 4 -}}
-ssorriaux/mangosfour
-{{- else if eq (.Values.wowVersion | int) 5 -}}
-ssorriaux/mangosfive
-{{- end -}}
-{{- end -}}
-
-{{/*
 Create repository name for world server
 */}}
 {{- define "repository.world" -}}

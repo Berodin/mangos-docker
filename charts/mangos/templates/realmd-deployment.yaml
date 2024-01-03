@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: {{ .Chart.Name }}-realmd
-          image: "{{- template "repository.realmd" . }}:{{ .Values.realmd.image.tag }}"
+          image: "{{ .Values.realmd.image.repository }}:{{ .Values.realmd.image.tag }}"
           imagePullPolicy: {{ .Values.realmd.image.pullPolicy }}
           env:
             - name: LOGIN_DATABASE_INFO
