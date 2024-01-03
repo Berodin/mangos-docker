@@ -1,14 +1,18 @@
 # Build stage
 FROM debian:bullseye-slim as builder
 
-ARG MANGOS_DATABASE_VERSION=master
+# Install dependencies
 RUN apt-get update && \
     apt-get install -y git wget && \
-    git clone https://github.com/mangostwo/database.git -b ${MANGOS_DATABASE_VERSION} --recursive && \
-    wget --no-check-certificate https://raw.githubusercontent.com/berodin/mangos-docker/master/launch_mysql.sh && \
-    chmod a+x launch_mysql.sh && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+    rm -rf /var/lib/apt/lists/*
+
+# Clone the repository
+ARG MANGOS_DATABASE_VERSION=master
+RUN git clone https://github.com/mangostwo/database.git -b ${MANGOS_DATABASE_VERSION} --recursive
+
+# Download the launch script
+RUN wget --no-check-certificate https://raw.githubusercontent.com/berodin/mangos-docker/master/launch_mysql.sh && \
+    chmod a+x launch_mysql.sh
 
 # Run stage
 FROM mysql:8.0.35

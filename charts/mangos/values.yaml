@@ -74,7 +74,9 @@ mysql:
   rootPassword: mangos
 
   storage: 10Gi
-
+  persistentVolume:
+    enabled: false
+    existingClaimName: ""
   image:
     tag: latest
     pullPolicy: IfNotPresent
