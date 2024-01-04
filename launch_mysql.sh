@@ -3,6 +3,9 @@ set -eo pipefail
 shopt -s nullglob
 
 LOG_FILE="/tmp/logfile.log"
+touch /tmp/logfile.log 
+chmod 777 /tmp/logfile.log
+chmod 777 /tmp
 echo "Starting script execution at $(date)" >> "$LOG_FILE"
 
 # Environment variables with defaults
@@ -80,7 +83,7 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 
 	echo "check config fine and dadir: $DATADIR" >> "$LOG_FILE"
 
-	echo "datadir check: DATADIR/mysql" >> "$LOG_FILE"
+	echo "datadir check: $DATADIR/mysql" >> "$LOG_FILE"
     if [ ! -d "$DATADIR/mysql" ]; then
 		echo "variable check: MYSQL_ROOT_PASSWORD: $MYSQL_ROOT_PASSWORD MYSQL_ALLOW_EMPTY_PASSWORD: $MYSQL_ALLOW_EMPTY_PASSWORD MYSQL_RANDOM_ROOT_PASSWORD: $MYSQL_RANDOM_ROOT_PASSWORD" >> "$LOG_FILE"
         if [ -z "$MYSQL_ROOT_PASSWORD" -a -z "$MYSQL_ALLOW_EMPTY_PASSWORD" -a -z "$MYSQL_RANDOM_ROOT_PASSWORD" ]; then
