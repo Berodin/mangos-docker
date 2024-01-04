@@ -24,7 +24,7 @@ WORKDIR /etc/mangos/
 
 # Only install necessary packages
 RUN apt-get update && \
-    apt-get install -y libmariadb-dev libmariadb3 libssl-dev wget && \
+    apt-get install -y libmariadb-dev libmariadb3 libssl-dev wget libmysqlclient21 && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy necessary files from builder

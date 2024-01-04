@@ -27,6 +27,6 @@ if [ -f /realmdconf/realmd.conf ]; then
 fi
 
 # populate template with env vars
-sed -i "s|LoginDatabaseInfo.*=.*|LoginDatabaseInfo = \"${LOGIN_DATABASE_INFO}\"|g" $CONFIGS/realmd.conf
+sed -i 's,LoginDatabaseInfo.*=.*,LoginDatabaseInfo = '"$(echo $LOGIN_DATABASE_INFO | sed 's/[;&]/\\&/g')"',g' $CONFIGS/realmd.conf
 
 ${BINDIR}/realmd -c $CONFIGS/realmd.conf
