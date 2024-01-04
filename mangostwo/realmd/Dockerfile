@@ -38,7 +38,7 @@ COPY --from=builder /server/install/etc ./conf
 
 # Set up the runtime environment
 RUN useradd -ms /bin/bash realm && \
-    wget https://raw.githubusercontent.com/Berodin/mangos-docker/master/launch_realmd.sh && \
+    wget https://raw.githubusercontent.com/Berodin/mangos-docker/test/launch_realmd.sh && \
     chmod -R a+x . && \
     mv conf/realmd.conf.dist conf/realmd.conf && \
     chown -R realm:realm .
