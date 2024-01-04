@@ -1,16 +1,12 @@
-FROM arm64v8/gcc:12.3.0 as builder
+FROM arm64v8/ubuntu:22.04 as builder
 ARG MANGOS_SERVER_VERSION=master
 ARG THREAD_COUNT="-j6"
 ARG CMAKE_VERSION="3.22.1"
-ENV GIT_HTTP_LOW_SPEED_LIMIT 0
-ENV GIT_HTTP_TRANSFER_TIMEOUT 1200
 
-RUN git config --global http.postBuffer 524288000 && \
-    git config --global core.compression 0 && \
-    git config --global http.lowSpeedLimit 0 && \
-    git config --global http.lowSpeedTime 999999 && \
-    apt-get update -qq && \
-    apt-get install -y openssl libssl-dev && \
+RUN apt-get update -qq && \
+    apt-get install -y git wget openssl libssl-dev make gcc-12 g++-12 libmysqlclient-dev && \
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100 && \
     wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-aarch64.sh && \
     chmod +x cmake-${CMAKE_VERSION}-linux-aarch64.sh && \
     ./cmake-${CMAKE_VERSION}-linux-aarch64.sh --skip-license --prefix=/usr/local && \
@@ -22,7 +18,7 @@ RUN git config --global http.postBuffer 524288000 && \
     make install ${THREAD_COUNT} && \
     rm -rf /var/lib/apt/lists/* /server/.git
 
-FROM arm64v8/gcc:12.3.0
+FROM arm64v8/ubuntu:22.04
 EXPOSE 3724
 WORKDIR /etc/mangos/
 
