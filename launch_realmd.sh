@@ -26,10 +26,21 @@ if [ -f /realmdconf/realmd.conf ]; then
 	CONFIGS=/realmdconf
 fi
 
-# populate template with env vars
-LOGIN_DATABASE_INFO_ESCAPED=$(echo "$LOGIN_DATABASE_INFO" | sed 's/;/\\;/g')
-echo "DEBUG: LOGIN_DATABASE_INFO_ESCAPED = ${LOGIN_DATABASE_INFO_ESCAPED}"
-sed -i "s|LOGIN_DATABASE_INFO|${LOGIN_DATABASE_INFO_ESCAPED}|g" $CONFIGS/realmd.conf
+# Use AWK to edit the configuration file
 
+# If the line starts with "LoginDatabaseInfo", replace it
+# Otherwise, leave the line unchanged
+awk -v login_info="$LOGIN_DATABASE_INFO" '
+    
+    $1 == "LoginDatabaseInfo" && $2 == "=" {
+        print "LoginDatabaseInfo = \"" login_info "\""
+    } 
+    
+    { 
+        print $0
+    }' "$CONFIGS/realmd.conf" > /tmp/realmd.conf
+
+# Move the edited configuration file back
+mv /tmp/realmd.conf "$CONFIGS/realmd.conf"
 
 ${BINDIR}/realmd -c $CONFIGS/realmd.conf
