@@ -2,47 +2,49 @@
 set -eo pipefail
 shopt -s nullglob
 
+LOG_FILE="/tmp/logfile.log"
+echo "Starting script execution at $(date)" >> "$LOG_FILE"
+
+# Environment variables with defaults
+MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-"mangos"}
+MYSQL_ALLOW_EMPTY_PASSWORD=${MYSQL_ALLOW_EMPTY_PASSWORD:-""}
+MYSQL_RANDOM_ROOT_PASSWORD=${MYSQL_RANDOM_ROOT_PASSWORD:-""}
+MYSQL_INITDB_SKIP_TZINFO=${MYSQL_INITDB_SKIP_TZINFO:-""}
+MYSQL_ONETIME_PASSWORD=${MYSQL_ONETIME_PASSWORD:-""}
+MYSQL_USER=${MYSQL_USER:-"mangos"}
+MYSQL_PASSWORD=${MYSQL_PASSWORD:-"mangos"}
+MYSQL_DATABASE=${MYSQL_DATABASE:-"mangos"}
+MANGOS_DATABASE_REALM_NAME=${MANGOS_DATABASE_REALM_NAME:-"Karazhan"}
+MANGOS_SERVER_VERSION=${MANGOS_SERVER_VERSION:-2}
+MANGOS_DB_RELEASE=${MANGOS_DB_RELEASE:-"Rel21"}
+MYSQL_ROOT_HOST=${MYSQL_ROOT_HOST:-"%"}
+
+echo "Checking for command options..." >> "$LOG_FILE"
 # if command starts with an option, prepend mysqld
 if [ "${1:0:1}" = '-' ]; then
-	set -- mysqld "$@"
+	echo "got command options" >> "$LOG_FILE"
+    set -- mysqld "$@"
 fi
 
 # skip setup if they want an option that stops mysqld
+echo "check want help" >> "$LOG_FILE"
 wantHelp=
 for arg; do
-	case "$arg" in
-		-'?'|--help|--print-defaults|-V|--version)
-			wantHelp=1
-			break
-			;;
-	esac
+	echo "arg: $arg" >> "$LOG_FILE"
+    case "$arg" in
+        -'?'|--help|--print-defaults|-V|--version)
+            wantHelp=1
+            break
+            ;;
+    esac
 done
 
-# usage: file_env VAR [DEFAULT]
-#    ie: file_env 'XYZ_DB_PASSWORD' 'example'
-# (will allow for "$XYZ_DB_PASSWORD_FILE" to fill in the value of
-#  "$XYZ_DB_PASSWORD" from a file, especially for Docker's secrets feature)
-file_env() {
-	local var="$1"
-	local fileVar="${var}_FILE"
-	local def="${2:-}"
-	if [ "${!var:-}" ] && [ "${!fileVar:-}" ]; then
-		echo >&2 "error: both $var and $fileVar are set (but are exclusive)"
-		exit 1
-	fi
-	local val="$def"
-	if [ "${!var:-}" ]; then
-		val="${!var}"
-	elif [ "${!fileVar:-}" ]; then
-		val="$(< "${!fileVar}")"
-	fi
-	export "$var"="$val"
-	unset "$fileVar"
-}
-
+# Check config and fetch values
+echo "_check_config" >> "$LOG_FILE"
 _check_config() {
 	toRun=( "$@" --verbose --help )
 	if ! errors="$("${toRun[@]}" 2>&1 >/dev/null)"; then
+		echo "errors: $errors in check_config" >> "$LOG_FILE"
 		cat >&2 <<-EOM
 
 			ERROR: mysqld failed while attempting to check config
@@ -55,81 +57,87 @@ _check_config() {
 }
 
 # Fetch value from server config
-# We use mysqld --verbose --help instead of my_print_defaults because the
-# latter only show values present in config files, and not server defaults
 _get_config() {
-	local conf="$1"; shift
-	"$@" --verbose --help --log-bin-index="$(mktemp -u)" 2>/dev/null | awk '$1 == "'"$conf"'" { print $2; exit }'
+    local conf="$1"; shift
+	echo "get_config" >> "$LOG_FILE"
+    "$@" --verbose --help --log-bin-index="$(mktemp -u)" 2>/dev/null | awk '$1 == "'"$conf"'" { print $2; exit }'
 }
 
 # allow the container to be started with `--user`
 if [ "$1" = 'mysqld' -a -z "$wantHelp" -a "$(id -u)" = '0' ]; then
-	_check_config "$@"
-	DATADIR="$(_get_config 'datadir' "$@")"
-	mkdir -p "$DATADIR"
-	chown -R mysql:mysql "$DATADIR"
-	exec gosu mysql "$BASH_SOURCE" "$@"
+    _check_config "$@"
+    DATADIR="$(_get_config 'datadir' "$@")"
+	echo "DATADIR: $DATADIR" >> "$LOG_FILE"
+    mkdir -p "$DATADIR"
+    chown -R mysql:mysql "$DATADIR"
+    exec gosu mysql "$BASH_SOURCE" "$@"
 fi
 
+echo "init DB" >> "$LOG_FILE"
 if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
-	# still need to check config, container may have started with --user
-	_check_config "$@"
-	# Get config
-	DATADIR="$(_get_config 'datadir' "$@")"
+    _check_config "$@"
+    DATADIR="$(_get_config 'datadir' "$@")"
 
-	if [ ! -d "$DATADIR/mysql" ]; then
-		file_env 'MYSQL_ROOT_PASSWORD'
-		if [ -z "$MYSQL_ROOT_PASSWORD" -a -z "$MYSQL_ALLOW_EMPTY_PASSWORD" -a -z "$MYSQL_RANDOM_ROOT_PASSWORD" ]; then
-			echo >&2 'error: database is uninitialized and password option is not specified '
-			echo >&2 '  You need to specify one of MYSQL_ROOT_PASSWORD, MYSQL_ALLOW_EMPTY_PASSWORD and MYSQL_RANDOM_ROOT_PASSWORD'
-			exit 1
-		fi
+	echo "check config fine and dadir: $DATADIR" >> "$LOG_FILE"
 
-		mkdir -p "$DATADIR"
+	echo "datadir check: DATADIR/mysql" >> "$LOG_FILE"
+    if [ ! -d "$DATADIR/mysql" ]; then
+		echo "variable check: MYSQL_ROOT_PASSWORD: $MYSQL_ROOT_PASSWORD MYSQL_ALLOW_EMPTY_PASSWORD: $MYSQL_ALLOW_EMPTY_PASSWORD MYSQL_RANDOM_ROOT_PASSWORD: $MYSQL_RANDOM_ROOT_PASSWORD" >> "$LOG_FILE"
+        if [ -z "$MYSQL_ROOT_PASSWORD" -a -z "$MYSQL_ALLOW_EMPTY_PASSWORD" -a -z "$MYSQL_RANDOM_ROOT_PASSWORD" ]; then
+            echo >&2 'error: database is uninitialized and password option is not specified '
+            echo >&2 '  You need to specify one of MYSQL_ROOT_PASSWORD, MYSQL_ALLOW_EMPTY_PASSWORD and MYSQL_RANDOM_ROOT_PASSWORD'
+            exit 1
+        fi
 
-		echo 'Initializing database'
-		"$@" --initialize-insecure
-		echo 'Database initialized'
+        mkdir -p "$DATADIR"
 
-		if command -v mysql_ssl_rsa_setup > /dev/null && [ ! -e "$DATADIR/server-key.pem" ]; then
-			# https://github.com/mysql/mysql-server/blob/23032807537d8dd8ee4ec1c4d40f0633cd4e12f9/packaging/deb-in/extra/mysql-systemd-start#L81-L84
-			echo 'Initializing certificates'
-			mysql_ssl_rsa_setup --datadir="$DATADIR"
-			echo 'Certificates initialized'
-		fi
+        echo 'Initializing database'
+        "$@" --initialize-insecure
+        echo 'Database initialized'
 
-		SOCKET="$(_get_config 'socket' "$@")"
-		"$@" --skip-networking --socket="${SOCKET}" &
-		pid="$!"
+        if command -v mysql_ssl_rsa_setup > /dev/null && [ ! -e "$DATADIR/server-key.pem" ]; then
+            echo 'Initializing certificates'
+			echo "Initializing certificates" >> "$LOG_FILE"
+            mysql_ssl_rsa_setup --datadir="$DATADIR"
+            echo 'Certificates initialized'
+        fi
 
-		mysql=( mysql --protocol=socket -uroot -hlocalhost --socket="${SOCKET}" )
+        SOCKET="$(_get_config 'socket' "$@")"
+		echo "SOCKET $SOCKET" >> "$LOG_FILE"
+        "$@" --skip-networking --socket="${SOCKET}" &
+        pid="$!"
 
-		for i in {30..0}; do
-			if echo 'SELECT 1' | "${mysql[@]}" &> /dev/null; then
-				break
-			fi
-			echo 'MySQL init process in progress...'
-			sleep 1
-		done
-		if [ "$i" = 0 ]; then
-			echo >&2 'MySQL init process failed.'
-			exit 1
-		fi
+        mysql=( mysql --protocol=socket -uroot -hlocalhost --socket="${SOCKET}" )
+		echo "mysql $mysql" >> "$LOG_FILE"
 
-		if [ -z "$MYSQL_INITDB_SKIP_TZINFO" ]; then
-			# sed is for https://bugs.mysql.com/bug.php?id=20545
-			mysql_tzinfo_to_sql /usr/share/zoneinfo | sed 's/Local time zone must be set--see zic manual page/FCTY/' | "${mysql[@]}" mysql
-		fi
+        for i in {30..0}; do
+            if echo 'SELECT 1' | "${mysql[@]}" &> /dev/null; then
+                break
+            fi
+            echo 'MySQL init process in progress...'
+            sleep 1
+        done
+        if [ "$i" = 0 ]; then
+            echo >&2 'MySQL init process failed.'
+            exit 1
+        fi
 
-		if [ ! -z "$MYSQL_RANDOM_ROOT_PASSWORD" ]; then
-			export MYSQL_ROOT_PASSWORD="$(pwgen -1 32)"
-			echo "GENERATED ROOT PASSWORD: $MYSQL_ROOT_PASSWORD"
-		fi
+        if [ -z "$MYSQL_INITDB_SKIP_TZINFO" ]; then
+			echo "MYSQL_INITDB_SKIP_TZINFO $MYSQL_INITDB_SKIP_TZINFO" >> "$LOG_FILE"
+            mysql_tzinfo_to_sql /usr/share/zoneinfo | sed 's/Local time zone must be set--see zic manual page/FCTY/' | "${mysql[@]}" mysql
+        fi
 
-		rootCreate=
-		# default root to listen for connections from anywhere
-		file_env 'MYSQL_ROOT_HOST' '%'
+		echo "MYSQL_RANDOM_ROOT_PASSWORD $MYSQL_RANDOM_ROOT_PASSWORD" >> "$LOG_FILE"
+        if [ ! -z "$MYSQL_RANDOM_ROOT_PASSWORD" ]; then
+            MYSQL_ROOT_PASSWORD="$(pwgen -1 32)"
+			echo "MYSQL_ROOT_PASSWORD $MYSQL_ROOT_PASSWORD" >> "$LOG_FILE"
+            echo "GENERATED ROOT PASSWORD: $MYSQL_ROOT_PASSWORD"
+        fi
+
+		echo "MYSQL_ROOT_HOST $MYSQL_ROOT_HOST" >> "$LOG_FILE"
+        rootCreate=
 		if [ ! -z "$MYSQL_ROOT_HOST" -a "$MYSQL_ROOT_HOST" != 'localhost' ]; then
+			echo "create root" >> "$LOG_FILE"
 			# no, we don't care if read finds a terminating character in this heredoc
 			# https://unix.stackexchange.com/questions/265149/why-is-set-o-errexit-breaking-this-read-heredoc-expression/265151#265151
 			read -r -d '' rootCreate <<-EOSQL || true
@@ -138,9 +146,8 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 			EOSQL
 		fi
 
+		echo "${mysql[@]}" >> "$LOG_FILE"
 		"${mysql[@]}" <<-EOSQL
-			-- What's done in this file shouldn't be replicated
-			--  or products like mysql-fabric won't work
 			SET @@SESSION.SQL_LOG_BIN=0;
 
 			DELETE FROM mysql.user WHERE user NOT IN ('mysql.sys', 'mysqlxsys', 'root') OR host NOT IN ('localhost') ;
@@ -151,114 +158,125 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 			FLUSH PRIVILEGES ;
 		EOSQL
 
-		if [ ! -z "$MYSQL_ROOT_PASSWORD" ]; then
-			mysql+=( -p"${MYSQL_ROOT_PASSWORD}" )
-		fi
+		echo "MYSQL_ROOT_PASSWORD: $MYSQL_ROOT_PASSWORD" >> "$LOG_FILE"
+        if [ ! -z "$MYSQL_ROOT_PASSWORD" ]; then
+            mysql+=( -p"${MYSQL_ROOT_PASSWORD}" )
+			echo "mysql in mysql_root_passwort: $mysql" >> "$LOG_FILE"
+        fi
 
-		#file_env 'MYSQL_DATABASE'
-		#if [ "$MYSQL_DATABASE" ]; then
-			#echo "CREATE DATABASE IF NOT EXISTS \`$MYSQL_DATABASE\` ;" | "${mysql[@]}"
-			#mysql+=( "$MYSQL_DATABASE" )
-		#fi
+		echo "MYSQL_USER: $MYSQL_USER" >> "$LOG_FILE"
+        if [ "$MYSQL_USER" -a "$MYSQL_PASSWORD" ]; then
+			echo "create mysql user" >> "$LOG_FILE"
+            echo "CREATE USER '$MYSQL_USER'@'%' IDENTIFIED BY '$MYSQL_PASSWORD' ;" | "${mysql[@]}"
 
-		file_env 'MYSQL_USER'
-		file_env 'MYSQL_PASSWORD'
-		if [ "$MYSQL_USER" -a "$MYSQL_PASSWORD" ]; then
-			echo "CREATE USER '$MYSQL_USER'@'%' IDENTIFIED BY '$MYSQL_PASSWORD' ;" | "${mysql[@]}"
+			echo "MYSQL_DATABASE: $MYSQL_DATABASE" >> "$LOG_FILE"
+            if [ "$MYSQL_DATABASE" ]; then
+				echo "grant all on database" >> "$LOG_FILE"
+                echo "GRANT ALL ON \`$MYSQL_DATABASE\`.* TO '$MYSQL_USER'@'%' ;" | "${mysql[@]}"
+            fi
 
-			if [ "$MYSQL_DATABASE" ]; then
-				echo "GRANT ALL ON \`$MYSQL_DATABASE\`.* TO '$MYSQL_USER'@'%' ;" | "${mysql[@]}"
-			fi
+            echo 'FLUSH PRIVILEGES ;' | "${mysql[@]}"
+        fi
 
-			echo 'FLUSH PRIVILEGES ;' | "${mysql[@]}"
-		fi
+        echo
+		
+		echo "MANGOS_SERVER_VERSION: $MANGOS_SERVER_VERSION" >> "$LOG_FILE"
+        # WORLD DATABASE CREATION
+        if [ -z "$MANGOS_SERVER_VERSION" ]; then
+            echo >&2 '  You need to specify MANGOS_SERVER_VERSION in order to initialize the database'
+            exit 1
+        fi
 
-		echo
+		echo "MANGOS_DB_RELEASE: $MANGOS_DB_RELEASE" >> "$LOG_FILE"
+        if [ -z "$MANGOS_DB_RELEASE" ]; then
+            echo >&2 '  You need to specify MANGOS_DB_RELEASE in order to initialize the database'
+            exit 1
+        fi
 
-    echo "WORLD DATABASE CREATION..."
-		if [ -z "$MANGOS_SERVER_VERSION" ]; then
-			echo >&2 '  You need to specify MANGOS_SERVER_VERSION in order to initialize the database'
-			exit 1
-		fi
-		if [ -z "$MANGOS_DB_RELEASE" ]; then
-			echo >&2 '  You need to specify MANGOS_DB_RELEASE in order to initialize the database'
-			exit 1
-		fi
-		if [ "$MANGOS_SERVER_VERSION" -eq 4 ]; then
-			MANGOS_WORLD_DB=mangos4
-			MANGOS_CHARACTER_DB=character4
-		elif [ "$MANGOS_SERVER_VERSION" -eq 3 ]; then
-			MANGOS_WORLD_DB=mangos3
-			MANGOS_CHARACTER_DB=character3
-		elif [ "$MANGOS_SERVER_VERSION" -eq 2 ]; then
-			MANGOS_WORLD_DB=mangos2
-			MANGOS_CHARACTER_DB=character2
-		elif [ "$MANGOS_SERVER_VERSION" -eq 1 ]; then
-			MANGOS_WORLD_DB=mangos1
-			MANGOS_CHARACTER_DB=character1
-		else
-			MANGOS_WORLD_DB=mangos0
-			MANGOS_CHARACTER_DB=character0
-		fi
+		echo "MANGOS_SERVER_VERSION: $MANGOS_SERVER_VERSION" >> "$LOG_FILE"
+		echo "MANGOS_WORLD_DB: $MANGOS_WORLD_DB" >> "$LOG_FILE"
+		echo "MANGOS_CHARACTER_DB: $MANGOS_CHARACTER_DB" >> "$LOG_FILE"
+        if [ "$MANGOS_SERVER_VERSION" -eq 4 ]; then
+            MANGOS_WORLD_DB=mangos4
+            MANGOS_CHARACTER_DB=character4
+        elif [ "$MANGOS_SERVER_VERSION" -eq 3 ]; then
+            MANGOS_WORLD_DB=mangos3
+            MANGOS_CHARACTER_DB=character3
+        elif [ "$MANGOS_SERVER_VERSION" -eq 2 ]; then
+            MANGOS_WORLD_DB=mangos2
+            MANGOS_CHARACTER_DB=character2
+        elif [ "$MANGOS_SERVER_VERSION" -eq 1 ]; then
+            MANGOS_WORLD_DB=mangos1
+            MANGOS_CHARACTER_DB=character1
+        else
+            MANGOS_WORLD_DB=mangos0
+            MANGOS_CHARACTER_DB=character0
+        fi
 
-    "${mysql[@]}" < /database/World/Setup/mangosdCreateDB.sql
-    "${mysql[@]}" -D${MANGOS_WORLD_DB} < /database/World/Setup/mangosdLoadDB.sql
-    for f in /database/World/Setup/FullDB/*; do
-      echo "$0: running $f"; "${mysql[@]}" -D${MANGOS_WORLD_DB} < "$f";
-    done
-		echo "APPLYING UPDATES..."
-		for f in /database/World/Updates/*/*.sql; do
-      echo "$0: running $f"; "${mysql[@]}" -D${MANGOS_WORLD_DB} < "$f";
-    done
-    echo "WORLD DATABASE CREATED."
-    echo "CHARACTER DATABASE CREATION..."
-    "${mysql[@]}" < /database/Character/Setup/characterCreateDB.sql
-    "${mysql[@]}"  -D${MANGOS_CHARACTER_DB} < /database/Character/Setup/characterLoadDB.sql
-		echo "APPLYING UPDATES..."
-		for f in /database/Character/Updates/*/*.sql; do
-      echo "$0: running $f"; "${mysql[@]}" -D${MANGOS_CHARACTER_DB} < "$f";
-    done
-    echo "CHARACTER DATABASE CREATED."
-    echo "REALM DATABASE CREATION..."
-	"${mysql[@]}" <<-EOSQL
-		CREATE DATABASE realmd DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
+        "${mysql[@]}" < /database/World/Setup/mangosdCreateDB.sql
+        "${mysql[@]}" -D${MANGOS_WORLD_DB} < /database/World/Setup/mangosdLoadDB.sql
+        for f in /database/World/Setup/FullDB/*; do
+			echo "do FullDB stuff" >> "$LOG_FILE"
+            echo "$0: running $f"; "${mysql[@]}" -D${MANGOS_WORLD_DB} < "$f";
+        done
+        echo "APPLYING UPDATES..."
+        for f in /database/World/Updates/*/*.sql; do
+			echo "do World/Updates stuff" >> "$LOG_FILE"
+            echo "$0: running $f"; "${mysql[@]}" -D${MANGOS_WORLD_DB} < "$f";
+        done
+        echo "WORLD DATABASE CREATED."
+        echo "CHARACTER DATABASE CREATION..."
+        "${mysql[@]}" < /database/Character/Setup/characterCreateDB.sql
+        "${mysql[@]}"  -D${MANGOS_CHARACTER_DB} < /database/Character/Setup/characterLoadDB.sql
+        echo "APPLYING UPDATES..."
+        for f in /database/Character/Updates/*/*.sql; do
+			echo "do Character/Updates stuff" >> "$LOG_FILE"
+            echo "$0: running $f"; "${mysql[@]}" -D${MANGOS_CHARACTER_DB} < "$f";
+        done
+        echo "CHARACTER DATABASE CREATED."
+        echo "REALM DATABASE CREATION..."
+	    "${mysql[@]}" <<-EOSQL
+		    CREATE DATABASE realmd DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
 		GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, ALTER, LOCK TABLES ON \`realmd\`.* TO 'mangos'@'%';
 		FLUSH PRIVILEGES;
 	EOSQL
     "${mysql[@]}" -Drealmd < /database/Realm/Setup/realmdLoadDB.sql
     echo "APPLYING UPDATES..."
     for f in /database/Realm/Updates/*/*.sql; do
+		echo "do Realm/Updates stuff" >> "$LOG_FILE"
         echo "$0: running $f"; "${mysql[@]}" -Drealmd < "$f";
     done
 	"${mysql[@]}" -Drealmd <<-EOSQL
 		INSERT INTO realmlist (name,realmbuilds) VALUES ('${MANGOS_DATABASE_REALM_NAME}','12340') ;
 	EOSQL
-    echo "REALM DATABASE CREATED."
+        echo "REALM DATABASE CREATED."
 
-		for f in /docker-entrypoint-initdb.d/*; do
-			case "$f" in
-				*.sh)     echo "$0: running $f"; . "$f" ;;
-				*.sql)    echo "$0: running $f"; "${mysql[@]}" < "$f"; echo ;;
-				*.sql.gz) echo "$0: running $f"; gunzip -c "$f" | "${mysql[@]}"; echo ;;
-				*)        echo "$0: ignoring $f" ;;
-			esac
-			echo
-		done
+        for f in /docker-entrypoint-initdb.d/*; do
+			echo "f: $f" >> "$LOG_FILE"
+            case "$f" in
+                *.sh)     echo "$0: running $f"; . "$f" ;;
+                *.sql)    echo "$0: running $f"; "${mysql[@]}" < "$f"; echo ;;
+                *.sql.gz) echo "$0: running $f"; gunzip -c "$f" | "${mysql[@]}"; echo ;;
+                *)        echo "$0: ignoring $f" ;;
+            esac
+            echo
+        done
 
 		if [ ! -z "$MYSQL_ONETIME_PASSWORD" ]; then
+			echo "MYSQL_ONETIME_PASSWORD: $MYSQL_ONETIME_PASSWORD" >> "$LOG_FILE"
 			"${mysql[@]}" <<-EOSQL
 				ALTER USER 'root'@'%' PASSWORD EXPIRE;
 			EOSQL
 		fi
-		if ! kill -s TERM "$pid" || ! wait "$pid"; then
-			echo >&2 'MySQL init process failed.'
-			exit 1
-		fi
+        if ! kill -s TERM "$pid" || ! wait "$pid"; then
+            echo >&2 'MySQL init process failed.'
+            exit 1
+        fi
 
-		echo
-		echo 'MySQL init process done. Ready for start up.'
-		echo
-	fi
+        echo
+        echo 'MySQL init process done. Ready for start up.'
+        echo
+    fi
 fi
 
 exec "$@"
