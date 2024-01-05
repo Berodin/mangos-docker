@@ -3,9 +3,6 @@ set -eo pipefail
 shopt -s nullglob
 
 LOG_FILE="/tmp/logfile.log"
-touch /tmp/logfile.log 
-chmod 777 /tmp/logfile.log
-chmod 777 /tmp
 echo "Starting script execution at $(date)" >> "$LOG_FILE"
 
 # Environment variables with defaults
@@ -122,6 +119,7 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
         done
         if [ "$i" = 0 ]; then
             echo >&2 'MySQL init process failed.'
+            echo "MySQL init process failed." >> "$LOG_FILE"
             exit 1
         fi
 
