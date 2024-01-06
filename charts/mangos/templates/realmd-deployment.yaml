@@ -33,7 +33,7 @@ spec:
             - name: CHART_FULLNAME
               value: {{ template "chart.fullname" . }}
             - name: DATABASE_SUFFIX
-              value: {{ .Values.wowVersion }}
+              value: "{{ .Values.wowVersion }}
             - name: MYSQL_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
