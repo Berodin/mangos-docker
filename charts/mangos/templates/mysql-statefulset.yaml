@@ -27,12 +27,12 @@ spec:
           env:
             - name: MYSQL_ROOT_PASSWORD
               valueFrom:
-              secretKeyRef:
-                name: "mangos-secret"
-                key: "MYSQL_ROOT_PASSWORD"
+                secretKeyRef:
+                  name: "mangos-secret"
+                  key: "MYSQL_ROOT_PASSWORD"
             - name: MYSQL_USER
               valueFrom:
-              secretKeyRef:
+                secretKeyRef:
                   name: mangos-secret
                   key: MYSQL_USER
             - name: MYSQL_PASSWORD
@@ -41,15 +41,15 @@ spec:
                   name: mangos-secret
                   key: MYSQL_PASSWORD
             - name: MYSQL_DATABASE
-            value: "{{ .Values.mysql.database }}"
+              value: "{{ .Values.mysql.database }}"
             - name: MANGOS_DATABASE_REALM_NAME
-            value: "{{ .Values.mysql.databaseRealmName }}"
+              value: "{{ .Values.mysql.databaseRealmName }}"
             - name: MANGOS_SERVER_VERSION
-            value: "{{ .Values.mysql.serverVersion }}"
+              value: "{{ .Values.mysql.serverVersion }}"
             - name: MANGOS_DB_RELEASE
-            value: "{{ .Values.mysql.dbRelease }}"
+              value: "{{ .Values.mysql.dbRelease }}"
             - name: MYSQL_ROOT_HOST
-            value: "{{ .Values.mysql.rootHost }}"
+              value: "{{ .Values.mysql.rootHost }}"
           ports:
             - name: mysql
               containerPort: 3306
