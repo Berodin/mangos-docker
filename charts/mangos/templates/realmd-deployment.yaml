@@ -33,22 +33,22 @@ spec:
             - name: CHART_FULLNAME
               value: {{ template "chart.fullname" . }}
             - name: DATABASE_SUFFIX
-              value: "{{ .Values.wowVersion }}
+              value: "{{ .Values.wowVersion }}"
             - name: MYSQL_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: mangos-secret
-                  key: MYSQL_ROOT_PASSWORD
+                  key: "MYSQL_ROOT_PASSWORD"
             - name: MYSQL_USER          
               valueFrom:
                 secretKeyRef:
                   name: "mangos-secret"
                   key: "MYSQL_USER"
-            - name: MYSQL_PASSWORD          
+            - name: MYSQL_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: "mangos-secret"
-                  key: "MYSQL_PASSWORD"           
+                  key: "MYSQL_PASSWORD"
           ports:
             - name: "mangos-realmd"
               containerPort: 3724
