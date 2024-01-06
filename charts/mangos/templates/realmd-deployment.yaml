@@ -44,7 +44,7 @@ spec:
           imagePullPolicy: {{ .Values.realmd.image.pullPolicy }}
           env:
             - name: CHART_FULLNAME
-              value: "{{ template "chart.fullname" . }}"
+              value: {{ template "chart.fullname" . }}
             - name: MYSQL_ROOT_PASSWORD
                 valueFrom:
                   secretKeyRef:
