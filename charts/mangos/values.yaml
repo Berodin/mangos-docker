@@ -16,6 +16,14 @@ realmd:
   initContainer: 
     enabled: false
   replicaCount: 1
+  rootPassword: ""  # leave empty to use secret
+  user: ""          # leave empty to use secret
+  password: ""      # leave empty to use secret
+  database: mangos
+  databaseRealmName: Karazhan
+  serverVersion: 2
+  dbRelease: Rel21
+  rootHost: "%"
 
   image:
     tag: stable
