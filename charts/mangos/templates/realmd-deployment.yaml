@@ -46,25 +46,25 @@ spec:
             - name: CHART_FULLNAME
               value: '{{ template "chart.fullname" . }}'
             - name: MYSQL_ROOT_PASSWORD
-                valueFrom:
-                  secretKeyRef:
-                    name: mangos-secret
-                    key: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mangos-secret
+                  key: MYSQL_ROOT_PASSWORD
             - name: MYSQL_USER          
-                valueFrom:
-                  secretKeyRef:
-                    name: "mangos-secret"
-                    key: "MYSQL_USER"
+              valueFrom:
+                secretKeyRef:
+                  name: "mangos-secret"
+                  key: "MYSQL_USER"
             - name: MYSQL_PASSWORD          
-                valueFrom:
-                  secretKeyRef:
-                    name: "mangos-secret"
-                    key: "MYSQL_PASSWORD" 
+              valueFrom:
+                secretKeyRef:
+                  name: "mangos-secret"
+                  key: "MYSQL_PASSWORD" 
             - name: LOGIN_DATABASE_INFO
-                valueFrom:
-                  configMapKeyRef:
-                    name: /etc/config/login_info
-                    key: login_info                   
+              valueFrom:
+                configMapKeyRef:
+                  name: /etc/config/login_info
+                  key: login_info                   
           ports:
             - name: "mangos-realmd"
               containerPort: 3724
