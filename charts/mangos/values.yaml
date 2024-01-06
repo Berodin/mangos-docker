@@ -9,7 +9,6 @@
 # 3 - Cataclysm       (Mangos Three)
 # 4 - Mists           (Mangos Four)
 # 5 - Warlords        (Mangos Five)
-wowVersion: 0
 
 # Realm/auth server settings
 realmd:
@@ -79,7 +78,7 @@ mysql:
   serverVersion: 2
   dbRelease: Rel21
   rootHost: "%"
-  
+
   persistentVolume:
     enabled: false
     existingClaimName: ""
