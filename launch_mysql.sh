@@ -70,7 +70,6 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" -a "$(id -u)" = '0' ]; then
 	echo "DATADIR: $DATADIR" >> "$LOG_FILE"
     mkdir -p "$DATADIR"
     chown -R mysql:mysql "$DATADIR"
-    exec gosu mysql "$BASH_SOURCE" "$@"
 fi
 
 echo "init DB" >> "$LOG_FILE"
@@ -111,10 +110,11 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 		echo "mysql $mysql" >> "$LOG_FILE"
 
         for i in {30..0}; do
-            if echo 'SELECT 1' | "${mysql[@]}" &> /dev/null; then
+            if echo 'SELECT 1' | "${mysql[@]}" &>> "$LOG_FILE"; then
+                echo "MySQL connection successful" >> "$LOG_FILE"
                 break
             fi
-            echo 'MySQL init process in progress...'
+            echo 'MySQL init process in progress...' >> "$LOG_FILE"
             sleep 1
         done
         if [ "$i" = 0 ]; then
@@ -122,6 +122,7 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
             echo "MySQL init process failed." >> "$LOG_FILE"
             exit 1
         fi
+
 
         if [ -z "$MYSQL_INITDB_SKIP_TZINFO" ]; then
 			echo "MYSQL_INITDB_SKIP_TZINFO $MYSQL_INITDB_SKIP_TZINFO" >> "$LOG_FILE"
