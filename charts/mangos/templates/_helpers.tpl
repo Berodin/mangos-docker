@@ -51,33 +51,3 @@ Create repository name for mysql
 {{- define "repository.mysql" -}}
 {{- template "repository.base" . }}-database-mysql
 {{- end -}}
-
-{{/*
-    Generate or get existing user
-*/}}
-{{- define "chart.mysqlUser" -}}
-{{- if not .Values.mysql.user -}}
-   {{- if not .Values.global.mysqlUser -}}
-      {{- $user := default "mangos" .Values.mysql.userOverride -}}
-      {{- set .Values.global "mysqlUser" $user -}}
-   {{- end -}}
-   {{- .Values.global.mysqlUser -}}
-{{- else -}}
-   {{- .Values.mysql.user -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
-    Generate or get existing password
-*/}}
-{{- define "chart.mysqlUserPassword" -}}
-{{- if not .Values.mysql.userPassword -}}
-   {{- if not .Values.global.mysqlUserPassword -}}
-      {{- $password := default (randAlphaNum 24) .Values.mysql.userPasswordOverride -}}
-      {{- set .Values.global "mysqlUserPassword" $password -}}
-   {{- end -}}
-   {{- .Values.global.mysqlUserPassword -}}
-{{- else -}}
-   {{- .Values.mysql.userPassword -}}
-{{- end -}}
-{{- end -}}

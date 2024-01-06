@@ -25,26 +25,15 @@ spec:
           image: busybox:latest
           command: ['sh', '-c', 'until nc -z {{ template "chart.fullname" . }}-mysql-service:3306; do echo waiting for db; sleep 2; done;']
       {{- end }}
-      initContainers:
-      - name: setup
-        image: alpine
-        command: ["/bin/sh", "-c"]
-        args:
-          - >
-            echo "${CHART_FULLNAME}-mysql-service;3306;$(cat /etc/secrets/MYSQL_USER);$(cat /etc/secrets/MYSQL_PASSWORD);realmd" > /etc/config/login_info;
-        volumeMounts:
-          - name: secret-volume
-            mountPath: /etc/secrets
-            readOnly: true
-          - name: config-volume
-            mountPath: /etc/config
       containers:
         - name: {{ .Chart.Name }}-realmd
           image: "{{ .Values.realmd.image.repository }}:{{ .Values.realmd.image.tag }}"
           imagePullPolicy: {{ .Values.realmd.image.pullPolicy }}
           env:
             - name: CHART_FULLNAME
-              value: '{{ template "chart.fullname" . }}'
+              value: {{ template "chart.fullname" . }}
+            - name: DATABASE_SUFFIX
+              value: {{- template "databaseSuffix" . -}}
             - name: MYSQL_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -59,12 +48,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: "mangos-secret"
-                  key: "MYSQL_PASSWORD" 
-            - name: LOGIN_DATABASE_INFO
-              valueFrom:
-                configMapKeyRef:
-                  name: /etc/config/login_info
-                  key: login_info                   
+                  key: "MYSQL_PASSWORD"           
           ports:
             - name: "mangos-realmd"
               containerPort: 3724
@@ -95,9 +79,3 @@ spec:
       tolerations:
 {{ toYaml . | indent 8 }}
     {{- end }}
-    volumes:
-    - name: secret-volume
-      secret:
-        secretName: mangos-secret
-    - name: config-volume
-      emptyDir: {}

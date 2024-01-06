@@ -16,7 +16,7 @@
 BINDIR=/etc/mangos/bin
 CONFDIR=/etc/mangos/conf
 CONFIGS=/tmp
-
+LOGIN_DATABASE_INFO="${CHART_FULLNAME}-mysql-service;3306;${MYSQL_USER};${MYSQL_PASSWORD};realmd;${DATABASE_SUFFIX}"
 # seed with defaults included in the container image, this is the
 # case when /realmdconf is not specified
 cp $CONFDIR/* /tmp
