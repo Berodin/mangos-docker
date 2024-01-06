@@ -194,9 +194,9 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
             GRANT SELECT ON mysql.* TO '$MYSQL_INFOSCHEMA_USER'@'localhost';
             FLUSH PRIVILEGES;
             "
-            echo "Benutzer $MYSQL_INFOSCHEMA_USER erstellt und Berechtigungen zugewiesen." >> "$LOG_FILE"
+            echo "User $MYSQL_INFOSCHEMA_USER created and granted permissions." >> "$LOG_FILE"
         else
-            echo "Benutzer $MYSQL_INFOSCHEMA_USER existiert bereits." >> "$LOG_FILE"
+            echo "User $MYSQL_INFOSCHEMA_USER already exists" >> "$LOG_FILE"
         fi
 
         echo
