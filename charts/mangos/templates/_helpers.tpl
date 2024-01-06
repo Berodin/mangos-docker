@@ -53,6 +53,21 @@ Create repository name for mysql
 {{- end -}}
 
 {{/*
+    Generate or get existing user
+*/}}
+{{- define "chart.User" -}}
+{{- if not .Values.mysql.user -}}
+   {{- if not .Values.global.user -}}
+      {{- $user := default "mangos" .Values.mysql.userOverride -}}
+      {{- set .Values.global "user" $user -}}
+   {{- end -}}
+   {{- .Values.global.user -}}
+{{- else -}}
+   {{- .Values.mysql.user -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
     Generate or get existing password
 */}}
 {{- define "chart.userPassword" -}}
@@ -66,20 +81,3 @@ Create repository name for mysql
    {{- .Values.mysql.userPassword -}}
 {{- end -}}
 {{- end -}}
-    
-
-{{/*
-    Generate or get existing user
-*/}}
-{{- define "chart.User" -}}
-{{- if not .Values.mysql.user -}}
-   {{- if not .Values.global.user -}}
-      {{- $password := default (randAlphaNum 24) .Values.mysql.userOverride -}}
-      {{- set .Values.global "user" $user -}}
-   {{- end -}}
-   {{- .Values.global.user -}}
-{{- else -}}
-   {{- .Values.mysql.user -}}
-{{- end -}}
-{{- end -}}
-
