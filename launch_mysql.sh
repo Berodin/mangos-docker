@@ -57,10 +57,11 @@ _check_config() {
 }
 
 # Fetch value from server config
+# Fetch value from server config
 _get_config() {
     local conf="$1"; shift
     echo "get_config for $conf" >> "$LOG_FILE"
-    local value=$("$@" --verbose --help --log-bin-index="$(mktemp -u)" 2>/dev/null | awk '$1 == "'"$conf"'" { print $2; exit }')
+    local value=$("$@" --verbose --help 2>/dev/null | grep "^$conf" | awk '{ print $2; exit }')
     echo "Config value for $conf: $value" >> "$LOG_FILE"
     echo $value
 }
