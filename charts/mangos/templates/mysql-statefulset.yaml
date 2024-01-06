@@ -71,14 +71,14 @@ spec:
             tcpSocket:
               port: 3306
             initialDelaySeconds: 180
-            periodSeconds: 10
-            timeoutSeconds: 5
+            periodSeconds: 30
+            timeoutSeconds: 10
           readinessProbe:
             tcpSocket:
               port: 3306
             initialDelaySeconds: 180
-            periodSeconds: 15
-            timeoutSeconds: 5
+            periodSeconds: 30
+            timeoutSeconds: 10
             failureThreshold: 20
           resources:
 {{ toYaml .Values.mysql.resources | indent 12 }}

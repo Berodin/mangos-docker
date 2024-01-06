@@ -42,15 +42,15 @@ spec:
           livenessProbe:
             tcpSocket:
               port: 3724
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 5
+            initialDelaySeconds: 180
+            periodSeconds: 30
+            timeoutSeconds: 10
           readinessProbe:
             tcpSocket:
               port: 3724
             initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 5
+            periodSeconds: 30
+            timeoutSeconds: 10
           resources:
 {{ toYaml .Values.realmd.resources | indent 12 }}
     {{- with .Values.realmd.nodeSelector }}
