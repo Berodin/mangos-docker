@@ -79,6 +79,7 @@ mysql:
   serverVersion: 2
   dbRelease: Rel21
   rootHost: "%"
+  
   persistentVolume:
     enabled: false
     existingClaimName: ""
