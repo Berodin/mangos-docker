@@ -11,6 +11,11 @@
 # 5 - Warlords        (Mangos Five)
 wowVersion: 0
 
+global:
+  user: ""
+  userPassword: ""
+
+
 # Realm/auth server settings
 realmd:
   initContainer: 
