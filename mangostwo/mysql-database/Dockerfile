@@ -12,15 +12,6 @@ RUN apt-get update && \
 # Run stage
 FROM mysql:8.2.0
 
-# Set environment variables
-ENV MANGOS_DATABASE_REALM_NAME=Karazhan \
-    MANGOS_SERVER_VERSION=2 \
-    MANGOS_DB_RELEASE=Rel21 \
-    MYSQL_USER=mangos \
-    MYSQL_PASSWORD=mangos \
-    MYSQL_ROOT_HOST=%
-
-
 # Copy artifacts from the build stage
 COPY --from=builder /database /database
 COPY --from=builder /launch_mysql.sh /launch_mysql.sh
