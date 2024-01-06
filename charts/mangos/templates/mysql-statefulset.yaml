@@ -67,19 +67,6 @@ spec:
             - name: mysql-data
               mountPath: /var/lib/mysql
               subPath: mysql
-          livenessProbe:
-            tcpSocket:
-              port: 3306
-            initialDelaySeconds: 180
-            periodSeconds: 30
-            timeoutSeconds: 10
-          readinessProbe:
-            tcpSocket:
-              port: 3306
-            initialDelaySeconds: 180
-            periodSeconds: 30
-            timeoutSeconds: 10
-            failureThreshold: 20
           resources:
 {{ toYaml .Values.mysql.resources | indent 12 }}
     {{- with .Values.mysql.nodeSelector }}
