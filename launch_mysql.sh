@@ -59,8 +59,10 @@ _check_config() {
 # Fetch value from server config
 _get_config() {
     local conf="$1"; shift
-	echo "get_config" >> "$LOG_FILE"
-    "$@" --verbose --help --log-bin-index="$(mktemp -u)" 2>/dev/null | awk '$1 == "'"$conf"'" { print $2; exit }'
+    echo "get_config for $conf" >> "$LOG_FILE"
+    local value=$("$@" --verbose --help --log-bin-index="$(mktemp -u)" 2>/dev/null | awk '$1 == "'"$conf"'" { print $2; exit }')
+    echo "Config value for $conf: $value" >> "$LOG_FILE"
+    echo $value
 }
 
 # allow the container to be started with `--user`
@@ -102,7 +104,8 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
         fi
 
         SOCKET="$(_get_config 'socket' "$@")"
-		echo "SOCKET $SOCKET" >> "$LOG_FILE"
+        echo "SOCKET value: $SOCKET" >> "$LOG_FILE"
+
         "$@" --skip-networking --socket="${SOCKET}" &
         pid="$!"
 
@@ -114,15 +117,14 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
                 echo "MySQL connection successful" >> "$LOG_FILE"
                 break
             fi
-            echo 'MySQL init process in progress...' >> "$LOG_FILE"
+            echo "MySQL init process in progress... Attempt $i" >> "$LOG_FILE"
             sleep 1
         done
         if [ "$i" = 0 ]; then
             echo >&2 'MySQL init process failed.'
-            echo "MySQL init process failed." >> "$LOG_FILE"
+            echo "MySQL init process failed after 30 attempts." >> "$LOG_FILE"
             exit 1
         fi
-
 
         if [ -z "$MYSQL_INITDB_SKIP_TZINFO" ]; then
 			echo "MYSQL_INITDB_SKIP_TZINFO $MYSQL_INITDB_SKIP_TZINFO" >> "$LOG_FILE"
