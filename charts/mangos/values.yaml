@@ -18,8 +18,9 @@ realmd:
   replicaCount: 1
 
   image:
-    tag: stable
     pullPolicy: IfNotPresent
+    tag: latest
+    repository: 
 
   service:
     type: NodePort
@@ -43,8 +44,9 @@ world:
   replicaCount: 1
 
   image:
-    tag: latest
     pullPolicy: IfNotPresent
+    tag: latest
+    repository: 
 
   service:
     type: NodePort
@@ -84,8 +86,9 @@ mysql:
     enabled: false
     existingClaimName: ""
   image:
-    tag: latest
     pullPolicy: IfNotPresent
+    tag: latest
+    repository: 
 
   service:
     type: ClusterIP
