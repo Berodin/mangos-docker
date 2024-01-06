@@ -11,11 +11,6 @@
 # 5 - Warlords        (Mangos Five)
 wowVersion: 0
 
-global:
-  mysqlUser: ""
-  mysqlUserPassword: ""
-
-
 # Realm/auth server settings
 realmd:
   initContainer: 
@@ -79,8 +74,8 @@ mysql:
   replicaCount: 1
 
   rootPassword: ""  # leave empty to use secret
-  user: ""          # leave empty to use secret
-  password: ""      # leave empty to use secret
+  MySQLUser: ""          # leave empty to use secret
+  MySQLUserPassword: ""      # leave empty to use secret
   database: mangos
   databaseRealmName: Karazhan
   serverVersion: 2
