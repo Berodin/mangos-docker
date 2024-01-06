@@ -50,6 +50,16 @@ spec:
               value: "{{ .Values.mysql.dbRelease }}"
             - name: MYSQL_ROOT_HOST
               value: "{{ .Values.mysql.rootHost }}"
+            - name: MYSQL_INFOSCHEMA_USER
+              valueFrom:
+                secretKeyRef:
+                  name: "mangos-secret"
+                  key: "MYSQL_INFOSCHEMA_USER"
+            - name: MYSQL_INFOSCHEMA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "mangos-secret"
+                  key: "MYSQL_INFOSCHEMA_PASSWORD"
           ports:
             - name: mysql
               containerPort: 3306
