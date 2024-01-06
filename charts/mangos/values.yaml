@@ -77,7 +77,7 @@ mysql:
   database: mangos
   databaseRealmName: Karazhan
   serverVersion: 2
-  dbRelease: Rel21
+  dbRelease: Rel22
   rootHost: "%"
   
   persistentVolume:
