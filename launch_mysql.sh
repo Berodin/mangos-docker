@@ -18,6 +18,9 @@ MANGOS_DATABASE_REALM_NAME=${MANGOS_DATABASE_REALM_NAME:-"Karazhan"}
 MANGOS_SERVER_VERSION=${MANGOS_SERVER_VERSION:-2}
 MANGOS_DB_RELEASE=${MANGOS_DB_RELEASE:-"Rel22"}
 MYSQL_ROOT_HOST=${MYSQL_ROOT_HOST:-"%"}
+MYSQL_ROOT_PASS="${MYSQL_ROOT_PASSWORD:-IhrRootPasswort}"  
+MYSQL_INFOSCHEMA_USER=mysql.infoschema
+MYSQL_INFOSCHEMA_PASS="${MYSQL_INFOSCHEMA_PASS:-changeit}"
 
 echo "Checking for command options..." >> "$LOG_FILE"
 # if command starts with an option, prepend mysqld
@@ -181,6 +184,19 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
             fi
 
             echo 'FLUSH PRIVILEGES ;' | "${mysql[@]}"
+        fi
+        
+        userExists=$(mysql -u "$MYSQL_ROOT_USER" -p"$MYSQL_ROOT_PASS" -sse "SELECT EXISTS(SELECT 1 FROM mysql.user WHERE user = '$MYSQL_INFOSCHEMA_USER')")
+        if [ "$userExists" -eq 0 ]; then
+            # MySQL-Befehle, um den Benutzer zu erstellen
+            mysql -u "$MYSQL_ROOT_USER" -p"$MYSQL_ROOT_PASS" -e "
+            CREATE USER '$MYSQL_INFOSCHEMA_USER'@'localhost' IDENTIFIED WITH 'caching_sha2_password' BY '$MYSQL_INFOSCHEMA_PASS';
+            GRANT SELECT ON mysql.* TO '$MYSQL_INFOSCHEMA_USER'@'localhost';
+            FLUSH PRIVILEGES;
+            "
+            echo "Benutzer $MYSQL_INFOSCHEMA_USER erstellt und Berechtigungen zugewiesen." >> "$LOG_FILE"
+        else
+            echo "Benutzer $MYSQL_INFOSCHEMA_USER existiert bereits." >> "$LOG_FILE"
         fi
 
         echo
