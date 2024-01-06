@@ -33,13 +33,13 @@ spec:
             - name: MYSQL_USER
               valueFrom:
                 secretKeyRef:
-                  name: "mangos-secret"
-                  key: "MYSQL_USER"
+                  name: mangos-secret
+                  key: MYSQL_USER
             - name: MYSQL_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: "mangos-secret"
-                  key: "MYSQL_PASSWORD"
+                  name: mangos-secret
+                  key: MYSQL_PASSWORD
             - name: MYSQL_DATABASE
               value: "{{ .Values.mysql.database }}"
             - name: MANGOS_DATABASE_REALM_NAME
