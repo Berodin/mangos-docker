@@ -12,8 +12,8 @@
 wowVersion: 0
 
 global:
-  user: ""
-  userPassword: ""
+  mysqlUser: ""
+  mysqlUserPassword: ""
 
 
 # Realm/auth server settings
