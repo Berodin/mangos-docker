@@ -46,10 +46,10 @@ spec:
             - name: CHART_FULLNAME
               value: "{{ template "chart.fullname" . }}"
             - name: MYSQL_ROOT_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: mangos-secret
-                  key: MYSQL_ROOT_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: mangos-secret
+                    key: MYSQL_ROOT_PASSWORD
             - name: MYSQL_USER          
                 valueFrom:
                   secretKeyRef:
