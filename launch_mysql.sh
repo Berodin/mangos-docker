@@ -131,7 +131,7 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
         fi
 
         if [ -z "$MYSQL_INITDB_SKIP_TZINFO" ]; then
-			echo "MYSQL_INITDB_SKIP_TZINFO $MYSQL_INITDB_SKIP_TZINFO" >> "$LOG_FILE"
+			echo "MYSQL_INITDB_SKIP_TZINFO $MYSQL_INITDB_SKIP_TZINFO ${mysql[@]} mysql" >> "$LOG_FILE"
             mysql_tzinfo_to_sql /usr/share/zoneinfo | sed 's/Local time zone must be set--see zic manual page/FCTY/' | "${mysql[@]}" mysql
         fi
 
@@ -186,10 +186,9 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
             echo 'FLUSH PRIVILEGES ;' | "${mysql[@]}"
         fi
         
-        userExists=$(mysql -u "$MYSQL_ROOT_USER" -p"$MYSQL_ROOT_PASS" -sse "SELECT EXISTS(SELECT 1 FROM mysql.user WHERE user = '$MYSQL_INFOSCHEMA_USER')")
+        userExists=$(mysql -u "$MYSQL_ROOT_USER" -p"$MYSQL_ROOT_PASSWORD" -sse "SELECT EXISTS(SELECT 1 FROM mysql.user WHERE user = '$MYSQL_INFOSCHEMA_USER')")
         if [ "$userExists" -eq 0 ]; then
-            # MySQL-Befehle, um den Benutzer zu erstellen
-            mysql -u "$MYSQL_ROOT_USER" -p"$MYSQL_ROOT_PASS" -e "
+            mysql -u "$MYSQL_ROOT_USER" -p"$MYSQL_ROOT_PASSWORD" -e "
             CREATE USER '$MYSQL_INFOSCHEMA_USER'@'localhost' IDENTIFIED WITH 'caching_sha2_password' BY '$MYSQL_INFOSCHEMA_PASS';
             GRANT SELECT ON mysql.* TO '$MYSQL_INFOSCHEMA_USER'@'localhost';
             FLUSH PRIVILEGES;
