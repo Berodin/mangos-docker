@@ -186,9 +186,9 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
             echo 'FLUSH PRIVILEGES ;' | "${mysql[@]}"
         fi
         
-        userExists=$(mysql -u "$MYSQL_ROOT_USER" -p"$MYSQL_ROOT_PASSWORD" -sse "SELECT EXISTS(SELECT 1 FROM mysql.user WHERE user = '$MYSQL_INFOSCHEMA_USER')")
+        userExists=$(mysql -u "root" -p"$MYSQL_ROOT_PASSWORD" -sse "SELECT EXISTS(SELECT 1 FROM mysql.user WHERE user = '$MYSQL_INFOSCHEMA_USER')")
         if [ "$userExists" -eq 0 ]; then
-            mysql -u "$MYSQL_ROOT_USER" -p"$MYSQL_ROOT_PASSWORD" -e "
+            mysql -u "root" -p"$MYSQL_ROOT_PASSWORD" -e "
             CREATE USER '$MYSQL_INFOSCHEMA_USER'@'localhost' IDENTIFIED WITH 'caching_sha2_password' BY '$MYSQL_INFOSCHEMA_PASS';
             GRANT SELECT ON mysql.* TO '$MYSQL_INFOSCHEMA_USER'@'localhost';
             FLUSH PRIVILEGES;
