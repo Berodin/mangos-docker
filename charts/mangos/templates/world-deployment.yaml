@@ -33,21 +33,25 @@ spec:
           image: "{{ .Values.world.image.repository }}:{{ .Values.world.image.tag }}"
           imagePullPolicy: {{ .Values.world.image.pullPolicy }}
           env:
-            - name: LOGIN_DATABASE_INFO
+            - name: CHART_FULLNAME
+              value: {{ template "chart.fullname" . }}
+            - name: DATABASE_SUFFIX
+              value: "{{ .Values.wowVersion }}"
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mangos-secret
+                  key: "MYSQL_ROOT_PASSWORD"
+            - name: MYSQL_USER          
               valueFrom:
                 secretKeyRef:
                   name: "mangos-secret"
-                  key: "LOGIN_DATABASE_INFO"
-            - name: WORLD_DATABASE_INFO
+                  key: "MYSQL_USER"
+            - name: MYSQL_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: "mangos-secret"
-                  key: "WORLD_DATABASE_INFO"
-            - name: CHARACTER_DATABASE_INFO
-              valueFrom:
-                secretKeyRef:
-                  name: "mangos-secret"
-                  key: "CHARACTER_DATABASE_INFO"
+                  key: "MYSQL_PASSWORD"
           ports:
             - name: "mangos-world"
               containerPort: 8085

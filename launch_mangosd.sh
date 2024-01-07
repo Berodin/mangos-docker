@@ -16,8 +16,9 @@
 BINDIR=/etc/mangos/bin
 CONFDIR=/etc/mangos/conf
 CONFIGS=/tmp
-
-
+LOGIN_DATABASE_INFO="${CHART_FULLNAME}-mysql-service;3306;${MYSQL_USER};${MYSQL_PASSWORD};realmd;${DATABASE_SUFFIX}"
+WORLD_DATABASE_INFO="${CHART_FULLNAME}-mysql-service;3306;${MYSQL_USER};${MYSQL_PASSWORD};mangos;${DATABASE_SUFFIX}"
+CHARACTER_DATABASE_INFO="${CHART_FULLNAME}-mysql-service;3306;${MYSQL_USER};${MYSQL_PASSWORD};character;${DATABASE_SUFFIX}"
 # seed with defaults included in the container image, this is the
 # case when /mangosconf is not specified
 cp $CONFDIR/* /tmp
@@ -32,8 +33,8 @@ if [ -f /mangosconf/ahbot.conf ]; then
   AHCONFIG="-a /mangosconf/ahbot.conf"
 fi
 # populate template with env vars
-sed -i "s/LOGIN_DATABASE_INFO/$LOGIN_DATABASE_INFO/g" $CONFIGS/mangosd.conf
-sed -i "s/WORLD_DATABASE_INFO/$WORLD_DATABASE_INFO/g" $CONFIGS/mangosd.conf
-sed -i "s/CHARACTER_DATABASE_INFO/$CHARACTER_DATABASE_INFO/g" $CONFIGS/mangosd.conf
-
+sed -i 's,LoginDatabaseInfo.*=.*,LoginDatabaseInfo = '"$(echo $LOGIN_DATABASE_INFO | sed 's/[;&]/\\&/g')"',g' $CONFIGS/mangosd.conf
+sed -i 's,WorldDatabaseInfo.*=.*,WorldDatabaseInfo = '"$(echo $WORLD_DATABASE_INFO | sed 's/[;&]/\\&/g')"',g' $CONFIGS/mangosd.conf
+sed -i 's,CharacterDatabaseInfo.*=.*,CharacterDatabaseInfo = '"$(echo $WORLD_DATABASE_INFO | sed 's/[;&]/\\&/g')"',g' $CONFIGS/mangosd.conf
+sed -i 's,'/server/install/etc/','/etc/mangos/',' $CONFIGS/mangosd.conf
 ${BINDIR}/mangosd -c $CONFIGS/mangosd.conf ${AHCONFIG}
