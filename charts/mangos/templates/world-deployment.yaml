@@ -85,6 +85,9 @@ spec:
         - name: mangos-dbc
           hostPath:
             path: {{ .Values.world.dbc }}
+        - name: mangos-data
+          persistentVolumeClaim:
+            claimName: {{ .Values.mysql.persistentVolume.existingClaimName }}
       {{- with .Values.world.nodeSelector }}
       nodeSelector:
 {{ toYaml . | indent 8 }}
@@ -97,7 +100,3 @@ spec:
       tolerations:
 {{ toYaml . | indent 8 }}
       {{- end }}
-        volumes:
-        - name: mangos-data
-          persistentVolumeClaim:
-            claimName: {{ .Values.mysql.persistentVolume.existingClaimName }}
