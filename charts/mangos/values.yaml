@@ -17,6 +17,10 @@ realmd:
     enabled: false
   replicaCount: 1
 
+  persistentVolume:
+    enabled: false
+    existingClaimName: ""
+
   image:
     pullPolicy: IfNotPresent
     tag: latest
@@ -42,7 +46,10 @@ world:
   initContainer: 
     enabled: false
   replicaCount: 1
-
+ 
+  persistentVolume:
+    enabled: false
+    existingClaimName: ""
   image:
     pullPolicy: IfNotPresent
     tag: latest

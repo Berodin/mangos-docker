@@ -52,6 +52,9 @@ spec:
           ports:
             - name: "mangos-realmd"
               containerPort: 3724
+          volumeMounts:
+            - name: mangos-realmd
+              mountPath: /etc/mangos/
           command: 
           resources:
 {{ toYaml .Values.realmd.resources | indent 12 }}
@@ -67,3 +70,7 @@ spec:
       tolerations:
 {{ toYaml . | indent 8 }}
     {{- end }}
+      volumes:
+      - name: mangos-realmd
+        persistentVolumeClaim:
+          claimName: {{ .Values.mysql.persistentVolume.existingClaimName }}

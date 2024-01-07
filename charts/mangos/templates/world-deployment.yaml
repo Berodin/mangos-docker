@@ -55,6 +55,9 @@ spec:
           ports:
             - name: "mangos-world"
               containerPort: 8085
+          volumeMounts:
+            - name: mangos-data
+              mountPath: /etc/mangos/
           livenessProbe:
             tcpSocket:
               port: 8085
@@ -94,3 +97,7 @@ spec:
       tolerations:
 {{ toYaml . | indent 8 }}
       {{- end }}
+        volumes:
+        - name: mangos-data
+          persistentVolumeClaim:
+            claimName: {{ .Values.mysql.persistentVolume.existingClaimName }}
