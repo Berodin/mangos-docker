@@ -267,6 +267,15 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 		echo "do Realm/Updates stuff" >> "$LOG_FILE"
         echo "$0: running $f"; "${mysql[@]}" -Drealmd < "$f";
     done
+
+    echo "Applying Realm_DB Rel21 updates..."
+    "${mysql[@]}" -Drealmd < /Realm_DB/Updates/Rel21/Rel21_03_001_Update_ROW_FORMAT_and_engine.sql
+    "${mysql[@]}" -Drealmd < /Realm_DB/Updates/Rel21/Rel21_04_001_Fix_account_table_errors.sql
+
+    echo "Applying additional database updates..."
+
+    "${mysql[@]}" -Drealmd < /database/Realm/Updates/Rel22/Rel22_01_001_Release_22.sql
+
 	"${mysql[@]}" -Drealmd <<-EOSQL
 		INSERT INTO realmlist (name,realmbuilds) VALUES ('${MANGOS_DATABASE_REALM_NAME}','12340') ;
 	EOSQL
