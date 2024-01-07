@@ -145,11 +145,11 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 		echo "MYSQL_ROOT_HOST $MYSQL_ROOT_HOST" >> "$LOG_FILE"
         rootCreate=
 		if [ ! -z "$MYSQL_ROOT_HOST" -a "$MYSQL_ROOT_HOST" != 'localhost' ]; then
-			echo "create root" >> "$LOG_FILE"
+			echo "create root with $MYSQL_ROOT_HOST and $MYSQL_ROOT_PASSWORD" >> "$LOG_FILE"
 			# no, we don't care if read finds a terminating character in this heredoc
 			# https://unix.stackexchange.com/questions/265149/why-is-set-o-errexit-breaking-this-read-heredoc-expression/265151#265151
 			read -r -d '' rootCreate <<-EOSQL || true
-				CREATE USER 'root'@'${MYSQL_ROOT_HOST}' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}' ;
+				CREATE USER 'root'@'${MYSQL_ROOT_HOST}' IDENTIFIED WITH 'caching_sha2_password' BY '${MYSQL_ROOT_PASSWORD}' ;
 				GRANT ALL ON *.* TO 'root'@'${MYSQL_ROOT_HOST}' WITH GRANT OPTION ;
 			EOSQL
 		fi
@@ -175,11 +175,11 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 		echo "MYSQL_USER: $MYSQL_USER" >> "$LOG_FILE"
         if [ "$MYSQL_USER" -a "$MYSQL_PASSWORD" ]; then
 			echo "create mysql user" >> "$LOG_FILE"
-            echo "CREATE USER '$MYSQL_USER'@'%' IDENTIFIED BY '$MYSQL_PASSWORD' ;" | "${mysql[@]}"
+            echo "CREATE USER '$MYSQL_USER'@'%' IDENTIFIED WITH 'caching_sha2_password' BY '$MYSQL_PASSWORD' ;" | "${mysql[@]}"
 
 			echo "MYSQL_DATABASE: $MYSQL_DATABASE" >> "$LOG_FILE"
             if [ "$MYSQL_DATABASE" ]; then
-				echo "grant all on database" >> "$LOG_FILE"
+				echo "grant all on database ${mysql[@]}" >> "$LOG_FILE"
                 echo "GRANT ALL ON \`$MYSQL_DATABASE\`.* TO '$MYSQL_USER'@'%' ;" | "${mysql[@]}"
             fi
 
