@@ -87,7 +87,7 @@ spec:
             path: {{ .Values.world.dbc }}
         - name: mangos-data
           persistentVolumeClaim:
-            claimName: {{ .Values.mysql.persistentVolume.existingClaimName }}
+            claimName: {{ .Values.world.persistentVolume.existingClaimName }}
       {{- with .Values.world.nodeSelector }}
       nodeSelector:
 {{ toYaml . | indent 8 }}

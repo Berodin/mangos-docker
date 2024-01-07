@@ -53,7 +53,7 @@ spec:
             - name: "mangos-realmd"
               containerPort: 3724
           volumeMounts:
-            - name: mangos-realmd
+            - name: mangos-realm
               mountPath: /etc/mangos/
           command: 
           resources:
@@ -71,6 +71,6 @@ spec:
 {{ toYaml . | indent 8 }}
     {{- end }}
       volumes:
-      - name: mangos-realmd
+      - name: mangos-realm
         persistentVolumeClaim:
-          claimName: {{ .Values.mysql.persistentVolume.existingClaimName }}
+          claimName: {{ .Values.realmd.persistentVolume.existingClaimName }}
