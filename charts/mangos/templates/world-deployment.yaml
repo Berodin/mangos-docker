@@ -57,7 +57,7 @@ spec:
               containerPort: 8085
           volumeMounts:
             - name: mangos-data
-              mountPath: /etc/mangos/
+              mountPath: /tmp
           livenessProbe:
             tcpSocket:
               port: 8085

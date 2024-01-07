@@ -54,7 +54,7 @@ spec:
               containerPort: 3724
           volumeMounts:
             - name: mangos-realm
-              mountPath: /etc/mangos/
+              mountPath: /tmp
           command: 
           resources:
 {{ toYaml .Values.realmd.resources | indent 12 }}
