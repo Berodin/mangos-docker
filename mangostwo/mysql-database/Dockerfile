@@ -8,6 +8,7 @@ RUN apt-get update && \
     git clone https://github.com/mangos/Realm_DB.git /Realm_DB && \
     cd /Realm_DB && \
     git checkout 08fe8f75a5751db811a0f5e7a191e1b74c4226ea && \
+    cd .. && \
     wget --no-check-certificate https://raw.githubusercontent.com/berodin/mangos-docker/test/launch_mysql.sh && \
     chmod a+x launch_mysql.sh && \
     rm -rf /var/lib/apt/lists/*
