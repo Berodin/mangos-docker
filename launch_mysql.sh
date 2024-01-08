@@ -64,7 +64,7 @@ setup_users_and_permissions() {
         GRANT ALL ON *.* TO 'root'@'localhost' WITH GRANT OPTION;
         DROP DATABASE IF EXISTS test;
         FLUSH PRIVILEGES;
-    EOSQL
+EOSQL
 
     # Application user setup
     log "Creating application user: $MYSQL_USER."
@@ -72,7 +72,7 @@ setup_users_and_permissions() {
         CREATE USER '$MYSQL_USER'@'%' IDENTIFIED WITH 'caching_sha2_password' BY '$MYSQL_PASSWORD';
         GRANT ALL ON \`$MYSQL_DATABASE\`.* TO '$MYSQL_USER'@'%';
         FLUSH PRIVILEGES;
-    EOSQL
+EOSQL
 
     # infoschema user setup
     log "Creating infoschema user: $MYSQL_INFOSCHEMA_USER."
@@ -80,7 +80,7 @@ setup_users_and_permissions() {
         CREATE USER '$MYSQL_INFOSCHEMA_USER'@'localhost' IDENTIFIED WITH 'caching_sha2_password' BY '$MYSQL_INFOSCHEMA_PASS';
         GRANT SELECT ON mysql.* TO '$MYSQL_INFOSCHEMA_USER'@'localhost';
         FLUSH PRIVILEGES;
-    EOSQL
+EOSQL
 }
 
 # Load database schemas and data
