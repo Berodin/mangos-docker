@@ -30,7 +30,6 @@ RUN cd server && \
 
 FROM ubuntu:22.04
 EXPOSE 3724
-ENV LOGIN_DATABASE_INFO=127.0.0.1;3306;root;mangos;realmd
 WORKDIR /etc/mangos/
 
 # Installieren Sie benötigte Abhängigkeiten und fügen Sie das GCC 12 Repository hinzu
@@ -49,7 +48,7 @@ COPY --from=builder /server/install/etc ./conf
 
 # Weitere Setup-Schritte
 RUN useradd -ms /bin/bash mangos && \
-    wget --no-check-certificate https://raw.githubusercontent.com/Berodin/mangos-docker/master/launch_mangosd.sh && \
+    wget --no-check-certificate https://raw.githubusercontent.com/Berodin/mangos-docker/test/launch_mangosd.sh && \
     chmod -R a+x . && \
     mv conf/mangosd.conf.dist conf/mangosd.conf && \
     chown -R mangos:mangos . && \
