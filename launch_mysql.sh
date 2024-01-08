@@ -30,7 +30,7 @@ MANGOS_CHARACTER_DB=character${MANGOS_SERVER_VERSION}
 get_config() {
     local conf="$1"
     log "Fetching configuration for $conf"
-    local value=$("$@" --verbose --help 2>/dev/null | grep "^$conf" | awk '{ print $2; exit }')
+    local value=$("mysqld" --verbose --help 2>/dev/null | grep "^$conf" | awk '{ print $2; exit }')
     log "Configuration value for $conf: $value"
     echo $value
 }
