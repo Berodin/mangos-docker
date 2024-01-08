@@ -75,7 +75,7 @@ setup_users_and_permissions() {
     EOSQL
 	
 	# infoschema user setup
-	log "Creating application user: $MYSQL_USER."
+	log "Creating infoschema user: $MYSQL_USER."
 	"${mysql_command[@]}" <<-EOSQL
         CREATE USER '$MYSQL_INFOSCHEMA_USER'@'localhost' IDENTIFIED WITH 'caching_sha2_password' BY '$MYSQL_INFOSCHEMA_PASS';
         GRANT SELECT ON mysql.* TO '$MYSQL_INFOSCHEMA_USER'@'localhost';
