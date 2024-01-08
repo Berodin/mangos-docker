@@ -98,7 +98,7 @@ load_database_data() {
         CREATE DATABASE realmd DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
         GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, ALTER, LOCK TABLES ON \`realmd\`.* TO 'mangos'@'%';
         FLUSH PRIVILEGES;
-    EOSQL
+EOSQL
     "${mysql_command[@]}" -Drealmd < /database/Realm/Setup/realmdLoadDB.sql
 }
 
