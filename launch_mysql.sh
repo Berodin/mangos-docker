@@ -57,7 +57,7 @@ setup_users_and_permissions() {
 
     # Root user setup
     log "Creating root user."
-    "${mysql_command[@]}" 
+    "${mysql_command[@]}" <<-EOSQL
         SET @@SESSION.SQL_LOG_BIN=0;
         DELETE FROM mysql.user WHERE user NOT IN ('mysql.sys', 'mysqlxsys', 'root') OR host NOT IN ('localhost');
         ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
@@ -73,10 +73,10 @@ setup_users_and_permissions() {
         GRANT ALL ON \`$MYSQL_DATABASE\`.* TO '$MYSQL_USER'@'%';
         FLUSH PRIVILEGES;
     EOSQL
-	
-	# infoschema user setup
-	log "Creating infoschema user: $MYSQL_USER."
-	"${mysql_command[@]}" <<-EOSQL
+
+    # infoschema user setup
+    log "Creating infoschema user: $MYSQL_INFOSCHEMA_USER."
+    "${mysql_command[@]}" <<-EOSQL
         CREATE USER '$MYSQL_INFOSCHEMA_USER'@'localhost' IDENTIFIED WITH 'caching_sha2_password' BY '$MYSQL_INFOSCHEMA_PASS';
         GRANT SELECT ON mysql.* TO '$MYSQL_INFOSCHEMA_USER'@'localhost';
         FLUSH PRIVILEGES;
