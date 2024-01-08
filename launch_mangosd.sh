@@ -17,8 +17,8 @@ BINDIR=/etc/mangos/bin
 CONFDIR=/etc/mangos/conf
 CONFIGS=/tmp
 LOGIN_DATABASE_INFO="${CHART_FULLNAME}-mysql-service;3306;${MYSQL_USER};${MYSQL_PASSWORD};realmd;${DATABASE_SUFFIX}"
-WORLD_DATABASE_INFO="${CHART_FULLNAME}-mysql-service;3306;${MYSQL_USER};${MYSQL_PASSWORD};mangos;${DATABASE_SUFFIX}"
-CHARACTER_DATABASE_INFO="${CHART_FULLNAME}-mysql-service;3306;${MYSQL_USER};${MYSQL_PASSWORD};character;${DATABASE_SUFFIX}"
+WORLD_DATABASE_INFO="${CHART_FULLNAME}-mysql-service;3306;${MYSQL_USER};${MYSQL_PASSWORD};mangos${DATABASE_SUFFIX}"
+CHARACTER_DATABASE_INFO="${CHART_FULLNAME}-mysql-service;3306;${MYSQL_USER};${MYSQL_PASSWORD};character${DATABASE_SUFFIX}"
 # seed with defaults included in the container image, this is the
 # case when /mangosconf is not specified
 cp $CONFDIR/* /tmp
