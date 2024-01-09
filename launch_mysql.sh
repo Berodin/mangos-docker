@@ -188,7 +188,7 @@ if [ "$1" = 'mysqld' ]; then
         initialize_mysql "$@"
         start_mysql_server "$SOCKET" "$@"
         wait_for_mysql "$SOCKET"
-        setup_users_and_permissions "$SOCKET"#
+        setup_users_and_permissions "$SOCKET"
         load_database_data "$SOCKET"
     fi
 
