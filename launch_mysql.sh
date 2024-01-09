@@ -59,7 +59,7 @@ initialize_mysql() {
 # Start MySQL Server in background
 start_mysql_server() {
     local SOCKET="$1"
-    "$@" --skip-networking --socket="${SOCKET}" &
+    mysqld --skip-networking --socket="${SOCKET}" &
     pid="$!"
     log "Starting MySQL server with command: $@ --skip-networking --socket=${SOCKET}"
     log "MySQL server started in background with PID $pid"
@@ -176,12 +176,14 @@ if [ "$1" = 'mysqld' ]; then
     if [ "$(id -u)" = '0' ]; then
         set_datadir_permissions "$DATADIR"
         setup_log_file
+        log "execute script again through gosu as mysql: gosu mysql $BASH_SOURCE $@"
         exec gosu mysql "$BASH_SOURCE" "$@"
     else
-        log "Running mysqld as non-root user"
+        log "Running mysqld as non-root user, so script was restartet with gosu: $BASH_SOURCE $@"
     fi
 
     if [ ! -d "$DATADIR/mysql" ]; then
+        
         initialize_mysql "$@"
         start_mysql_server "$SOCKET" "$@"
         wait_for_mysql "$SOCKET"
