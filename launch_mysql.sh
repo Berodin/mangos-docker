@@ -49,6 +49,32 @@ initialize_mysql() {
     log "Database initialized."
 }
 
+# Start MySQL Server in background
+start_mysql_server() {
+    local SOCKET="$1"
+    "$@" --skip-networking --socket="${SOCKET}" &
+    pid="$!"
+    log "MySQL server started in background with PID $pid"
+}
+
+# Wait for MySQL Server readiness
+wait_for_mysql() {
+    local mysql_command=( mysql --protocol=socket -uroot -hlocalhost --socket="$1" )
+    for i in {30..0}; do
+        if echo 'SELECT 1' | "${mysql_command[@]}" &> /dev/null; then
+            break
+        fi
+        log "Waiting for MySQL server to be ready..."
+        sleep 1
+    done
+    if [ "$i" = 0 ]; then
+        log "MySQL init process failed."
+        exit 1
+    fi
+    log "MySQL server is ready."
+}
+
+
 # Create users and set permissions
 setup_users_and_permissions() {
     log "Setting up users and permissions."
@@ -141,6 +167,8 @@ if [ "$1" = 'mysqld' ]; then
 
     if [ ! -d "$DATADIR/mysql" ]; then
         initialize_mysql "$@"
+        start_mysql_server "$SOCKET" "$@"
+        wait_for_mysql "$SOCKET"
         setup_users_and_permissions "$SOCKET"#
         load_database_data "$SOCKET"
     fi
