@@ -61,6 +61,7 @@ start_mysql_server() {
     local SOCKET="$1"
     "$@" --skip-networking --socket="${SOCKET}" &
     pid="$!"
+    log "Starting MySQL server with command: $@ --skip-networking --socket=${SOCKET}"
     log "MySQL server started in background with PID $pid"
 }
 
