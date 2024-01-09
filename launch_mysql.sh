@@ -142,12 +142,10 @@ if [ "$1" = 'mysqld' ]; then
     if [ ! -d "$DATADIR/mysql" ]; then
         initialize_mysql "$@"
         setup_users_and_permissions "$SOCKET"#
-
-        # Always apply database updates
         load_database_data "$SOCKET"
     fi
 
-
+    # Always apply database updates
     apply_database_updates "$SOCKET"
     log 'MySQL init process done. Ready for start up.'
 fi
