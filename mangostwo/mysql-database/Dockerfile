@@ -14,7 +14,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Run stage
-FROM mysql:8.2.0
+FROM mysql:8.0
 
 # Copy artifacts from the build stage
 COPY --from=builder /database /database
