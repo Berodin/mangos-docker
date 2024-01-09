@@ -165,6 +165,13 @@ if [ "$1" = 'mysqld' ]; then
     SOCKET=$(get_config 'socket' "$@")
     log "Data directory: $DATADIR, Socket: $SOCKET"
 
+    if [ "$(id -u)" = '0' ]; then
+        set_datadir_permissions "$DATADIR"
+        exec gosu mysql "$BASH_SOURCE" "$@"
+    else
+        log "Running mysqld as non-root user"
+    fi
+
     if [ ! -d "$DATADIR/mysql" ]; then
         initialize_mysql "$@"
         start_mysql_server "$SOCKET" "$@"
