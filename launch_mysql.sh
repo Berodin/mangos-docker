@@ -26,6 +26,13 @@ MYSQL_INFOSCHEMA_PASS="${MYSQL_INFOSCHEMA_PASS:-changeit}"
 MANGOS_WORLD_DB=mangos${MANGOS_SERVER_VERSION}
 MANGOS_CHARACTER_DB=character${MANGOS_SERVER_VERSION}
 
+# Check and set permissions for log file
+setup_log_file() {
+    touch "$LOG_FILE"
+    chown mysql:mysql "$LOG_FILE"
+    chmod 660 "$LOG_FILE"
+}
+
 # Fetch configuration value
 get_config() {
     local conf="$1"
@@ -167,6 +174,7 @@ if [ "$1" = 'mysqld' ]; then
 
     if [ "$(id -u)" = '0' ]; then
         set_datadir_permissions "$DATADIR"
+        setup_log_file
         exec gosu mysql "$BASH_SOURCE" "$@"
     else
         log "Running mysqld as non-root user"
