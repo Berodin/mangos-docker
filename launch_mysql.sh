@@ -101,6 +101,8 @@ setup_users_and_permissions() {
         FLUSH PRIVILEGES;
 EOSQL
 
+    # after creating root user with password it is needed to change to login by password
+    local mysql_command=( mysql --protocol=socket -uroot -p"${MYSQL_ROOT_PASSWORD}" -hlocalhost --socket="$1" )
     # Application user setup
     log "Creating application user: $MYSQL_USER." 
     "${mysql_command[@]}" <<-EOSQL 2>&1 | tee -a "$LOG_FILE"
