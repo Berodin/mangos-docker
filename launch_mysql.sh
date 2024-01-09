@@ -52,21 +52,21 @@ set_datadir_permissions() {
 # Initialize MySQL Database
 initialize_mysql() {
     log "Initializing MySQL Database."
-    "$@" --initialize-insecure
+    "mysqld" --initialize-insecure
     log "Database initialized."
 }
 
 # Start MySQL Server in background
 start_mysql_server() {
     local SOCKET="$1"
-    "$@" --skip-networking --socket="${SOCKET}" &
+    "mysqld" --skip-networking --socket="${SOCKET}" &
     pid="$!"
     log "MySQL server started in background with PID $pid"
 }
 
 # Wait for MySQL Server readiness
 wait_for_mysql() {
-    local mysql_command=( mysql --protocol=socket -uroot -hlocalhost --socket="$1" )
+    local mysql_command=( mysqld --protocol=socket -uroot -hlocalhost --socket="$1" )
     for i in {30..0}; do
         if echo 'SELECT 1' | "${mysql_command[@]}" &> /dev/null; then
             break
