@@ -80,18 +80,19 @@ wait_for_mysql() {
         exit 1
     fi
     log "MySQL server is ready."
+    sleep 5
 }
 
 
 # Create users and set permissions
 setup_users_and_permissions() {
     log "Setting up users and permissions."
-
+    log "execute mysql --protocol=socket -uroot -hlocalhost --socket=$1"
     local mysql_command=( mysql --protocol=socket -uroot -hlocalhost --socket="$1" )
 
     # Root user setup
-    log "Creating root user."
-    "${mysql_command[@]}" <<-EOSQL
+    log "Creating root user." 
+    "${mysql_command[@]}" <<-EOSQL 2>&1 | tee -a "$LOG_FILE"
         SET @@SESSION.SQL_LOG_BIN=0;
         DELETE FROM mysql.user WHERE user NOT IN ('mysql.sys', 'mysqlxsys', 'root') OR host NOT IN ('localhost');
         ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
@@ -101,8 +102,8 @@ setup_users_and_permissions() {
 EOSQL
 
     # Application user setup
-    log "Creating application user: $MYSQL_USER."
-    "${mysql_command[@]}" <<-EOSQL
+    log "Creating application user: $MYSQL_USER." 
+    "${mysql_command[@]}" <<-EOSQL 2>&1 | tee -a "$LOG_FILE"
         CREATE USER '$MYSQL_USER'@'%' IDENTIFIED WITH 'caching_sha2_password' BY '$MYSQL_PASSWORD';
         GRANT ALL ON \`$MYSQL_DATABASE\`.* TO '$MYSQL_USER'@'%';
         FLUSH PRIVILEGES;
@@ -110,7 +111,7 @@ EOSQL
 
     # infoschema user setup
     log "Creating infoschema user: $MYSQL_INFOSCHEMA_USER."
-    "${mysql_command[@]}" <<-EOSQL
+    "${mysql_command[@]}" <<-EOSQL 2>&1 | tee -a "$LOG_FILE"
         CREATE USER '$MYSQL_INFOSCHEMA_USER'@'localhost' IDENTIFIED WITH 'caching_sha2_password' BY '$MYSQL_INFOSCHEMA_PASS';
         GRANT SELECT ON mysql.* TO '$MYSQL_INFOSCHEMA_USER'@'localhost';
         FLUSH PRIVILEGES;
