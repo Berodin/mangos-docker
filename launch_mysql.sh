@@ -52,10 +52,18 @@ set_datadir_permissions() {
 
 # Initialize MySQL Database
 initialize_db() {
-    log "Initializing MariaDB system tables."
-    mariadb-install-db --user=mysql
-    log "MariaDB system tables initialized."
+    if [ ! -d "$DATADIR/mysql" ]; then
+        log "Initializing MariaDB system tables."
+        mariadb-install-db --user=mysql
+        log "MariaDB system tables initialized."
+    else
+        log "MariaDB system tables already exist, running mysql_upgrade."
+        mysql_upgrade --force --user=mysql
+        log "MariaDB system tables upgraded."
+    fi
+    sleep 30
 }
+
 
 # Start MySQL Server in background
 start_mysql_server() {
@@ -66,10 +74,11 @@ start_mysql_server() {
     log "MySQL server started in background with PID $pid"
 }
 
+
 # Wait for MySQL Server readiness
 wait_for_mysql() {
     local mysql_command=( mysql --protocol=socket -uroot -hlocalhost --socket="$1" )
-    for i in {60..0}; do
+    for i in {30..0}; do
         if echo 'SELECT 1' | "${mysql_command[@]}" &> /dev/null; then
             break
         fi
@@ -81,9 +90,7 @@ wait_for_mysql() {
         exit 1
     fi
     log "MySQL server is ready."
-    sleep 5
 }
-
 
 # Create users and set permissions
 setup_users_and_permissions() {
@@ -187,7 +194,7 @@ apply_database_updates() {
 # Main execution logic
 if [ "$1" = 'mysqld' ]; then
     DATADIR=$(get_config 'datadir' "$@")
-    initialize_db "$@"
+    initialize_db
     set_datadir_permissions "$DATADIR"
 
     SOCKET=$(get_config 'socket' "$@")
