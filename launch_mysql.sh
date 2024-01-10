@@ -51,11 +51,11 @@ set_datadir_permissions() {
 }
 
 # Initialize MySQL Database
-initialize_mysql() {
-    log "Initializing MySQL Database."
-    "$@" --initialize-insecure
-    log "Database initialized."
-}
+#initialize_mysql() {
+#    log "Initializing MySQL Database."
+#    "$@" --initialize-insecure
+#    log "Database initialized."
+#}
 
 # Start MySQL Server in background
 start_mysql_server() {
