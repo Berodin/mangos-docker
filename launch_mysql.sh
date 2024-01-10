@@ -85,43 +85,26 @@ start_and_wait_for_mysql_server() {
     exit 1
 }
 
-# Create an init file for setting up initial root user
+# Create an init file for setting up initial root user and additional users
 create_init_file() {
     echo "SET @@SESSION.SQL_LOG_BIN=0;" > "$INIT_FILE"
     echo "DELETE FROM mysql.user WHERE user NOT IN ('mysql.sys', 'mysqlxsys', 'root') OR host NOT IN ('localhost');" >> "$INIT_FILE"
-    echo "ALTER USER 'root'@'localhost' IDENTIFIED BY ${MYSQL_ROOT_PASSWORD};" >> "$INIT_FILE"
-    echo "FLUSH PRIVILEGES;" >> "$INIT_FILE"
+    echo "ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';" >> "$INIT_FILE"
     echo "GRANT ALL ON *.* TO 'root'@'localhost' WITH GRANT OPTION;" >> "$INIT_FILE"
     echo "DROP DATABASE IF EXISTS test;" >> "$INIT_FILE"
     echo "FLUSH PRIVILEGES;" >> "$INIT_FILE"
+
+    # Application user setup
+    echo "CREATE USER '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';" >> "$INIT_FILE"
+    echo "GRANT ALL ON \`${MYSQL_DATABASE}\`.* TO '${MYSQL_USER}'@'%';" >> "$INIT_FILE"
+
+    # Infoschema user setup
+    echo "CREATE USER '${MYSQL_INFOSCHEMA_USER}'@'localhost' IDENTIFIED BY '${MYSQL_INFOSCHEMA_PASS}';" >> "$INIT_FILE"
+    echo "GRANT SELECT ON mysql.* TO '${MYSQL_INFOSCHEMA_USER}'@'localhost';" >> "$INIT_FILE"
+
+    echo "FLUSH PRIVILEGES;" >> "$INIT_FILE"
     chmod 660 "$INIT_FILE"
     chown mysql:mysql "$INIT_FILE"
-}
-
-# Create users and set permissions
-setup_users_and_permissions() {
-    log "Setting up users and permissions."
-    log "execute mysql --protocol=socket -uroot -hlocalhost --socket=$1"
-
-    # after creating root user with password it is needed to change to login by password
-    mysql_command=( mysql --protocol=socket -uroot -p${MYSQL_ROOT_PASSWORD} -hlocalhost --socket="$1" )
-    log "execute user creation with new mysql command: $mysql_command"
-    log "should be equivalent to mysql --protocol=socket -uroot -p${MYSQL_ROOT_PASSWORD} -hlocalhost --socket=$1"
-    # Application user setup
-    log "Creating application user: $MYSQL_USER." 
-    "${mysql_command[@]}" <<-EOSQL 2>&1 | tee -a "$LOG_FILE"
-        CREATE USER '$MYSQL_USER'@'%' IDENTIFIED WITH 'mysql_native_password' BY '$MYSQL_PASSWORD';
-        GRANT ALL ON \`$MYSQL_DATABASE\`.* TO '$MYSQL_USER'@'%';
-        FLUSH PRIVILEGES;
-EOSQL
-
-    # infoschema user setup
-    log "Creating infoschema user: $MYSQL_INFOSCHEMA_USER."
-    "${mysql_command[@]}" <<-EOSQL 2>&1 | tee -a "$LOG_FILE"
-        CREATE USER '$MYSQL_INFOSCHEMA_USER'@'localhost' IDENTIFIED WITH 'mysql_native_password' BY '$MYSQL_INFOSCHEMA_PASS';
-        GRANT SELECT ON mysql.* TO '$MYSQL_INFOSCHEMA_USER'@'localhost';
-        FLUSH PRIVILEGES;
-EOSQL
 }
 
 # Load database schemas and data
@@ -189,9 +172,16 @@ apply_database_updates() {
 if [ "$1" = 'mysqld' ]; then
     DATADIR=$(get_config 'datadir' "$@")
     set_datadir_permissions "$DATADIR"
-    setup_log_file
+
     SOCKET=$(get_config 'socket' "$@")
     log "Data directory: $DATADIR, Socket: $SOCKET"
+
+    if [ "$(id -u)" = '0' ]; then
+        setup_log_file
+        set_datadir_permissions "$DATADIR"
+        log "Executing script with gosu as mysql user"
+        exec gosu mysql "$BASH_SOURCE" "$@"
+    fi
 
     if [ ! -d "$DATADIR/mysql" ]; then
         touch $INIT_FILE
@@ -204,14 +194,9 @@ if [ "$1" = 'mysqld' ]; then
         wait $pid
     fi
 
-    # Start the server normally with gosu for regular operations
-    if [ "$(id -u)" = '0' ]; then
-        exec gosu mysql "$BASH_SOURCE" "$@"
-    else
-        start_and_wait_for_mysql_server "$SOCKET"
-        apply_database_updates "$SOCKET"
-        log 'MySQL init process done. Ready for start up.'
-    fi
+    # Always apply database updates
+    apply_database_updates "$SOCKET"
+    log 'MySQL init process done. Ready for start up.'
 fi
 
 exec "$@"
