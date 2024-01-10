@@ -6,6 +6,7 @@ set -eo pipefail
 shopt -s nullglob
 
 LOG_FILE="/tmp/logfile.log"
+INIT_FILE="/tmp/init.sql"
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$LOG_FILE"
 }
@@ -54,6 +55,7 @@ set_datadir_permissions() {
 initialize_db() {
     log "Checking if MariaDB system tables need initialization."
     if [ ! -d "$DATADIR/mysql" ]; then
+        create_init_file
         log "Initializing MariaDB system tables."
         mariadb-install-db --user=mysql
         log "MariaDB system tables initialized."
@@ -83,22 +85,23 @@ start_and_wait_for_mysql_server() {
     exit 1
 }
 
+# Create an init file for setting up initial root user
+create_init_file() {
+    echo "SET @@SESSION.SQL_LOG_BIN=0;" > "$INIT_FILE"
+    echo "DELETE FROM mysql.user WHERE user NOT IN ('mysql.sys', 'mysqlxsys', 'root') OR host NOT IN ('localhost');" >> "$INIT_FILE"
+    echo "ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';" >> "$INIT_FILE"
+    echo "FLUSH PRIVILEGES;" >> "$INIT_FILE"
+    GRANT ALL ON *.* TO 'root'@'localhost' WITH GRANT OPTION; >> "$INIT_FILE"
+    DROP DATABASE IF EXISTS test; >> "$INIT_FILE"
+    FLUSH PRIVILEGES; >> "$INIT_FILE"
+    chmod 660 "$INIT_FILE"
+    chown mysql:mysql "$INIT_FILE"
+}
+
 # Create users and set permissions
 setup_users_and_permissions() {
     log "Setting up users and permissions."
     log "execute mysql --protocol=socket -uroot -hlocalhost --socket=$1"
-    local mysql_command=( mysql --protocol=socket -uroot -hlocalhost --socket="$1" )
-
-    # Root user setup
-    log "Creating root user." 
-    "${mysql_command[@]}" <<-EOSQL 2>&1 | tee -a "$LOG_FILE"
-        SET @@SESSION.SQL_LOG_BIN=0;
-        DELETE FROM mysql.user WHERE user NOT IN ('mysql.sys', 'mysqlxsys', 'root') OR host NOT IN ('localhost');
-        ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
-        GRANT ALL ON *.* TO 'root'@'localhost' WITH GRANT OPTION;
-        DROP DATABASE IF EXISTS test;
-        FLUSH PRIVILEGES;
-EOSQL
 
     # after creating root user with password it is needed to change to login by password
     mysql_command=( mysql --protocol=socket -uroot -p${MYSQL_ROOT_PASSWORD} -hlocalhost --socket="$1" )
@@ -200,8 +203,8 @@ if [ "$1" = 'mysqld' ]; then
     if [ ! -d "$DATADIR/mysql" ]; then
         initialize_db
         start_and_wait_for_mysql_server "$SOCKET"
-        mysql_upgrade --force --user=mysql
         setup_users_and_permissions "$SOCKET"
+        mysql_upgrade --force --user=mysql
         load_database_data "$SOCKET"
     fi
 
