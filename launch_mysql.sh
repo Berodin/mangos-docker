@@ -91,9 +91,9 @@ create_init_file() {
     echo "DELETE FROM mysql.user WHERE user NOT IN ('mysql.sys', 'mysqlxsys', 'root') OR host NOT IN ('localhost');" >> "$INIT_FILE"
     echo "ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';" >> "$INIT_FILE"
     echo "FLUSH PRIVILEGES;" >> "$INIT_FILE"
-    GRANT ALL ON *.* TO 'root'@'localhost' WITH GRANT OPTION; >> "$INIT_FILE"
-    DROP DATABASE IF EXISTS test; >> "$INIT_FILE"
-    FLUSH PRIVILEGES; >> "$INIT_FILE"
+    echo "GRANT ALL ON *.* TO 'root'@'localhost' WITH GRANT OPTION;" >> "$INIT_FILE"
+    echo "DROP DATABASE IF EXISTS test;" >> "$INIT_FILE"
+    echo "FLUSH PRIVILEGES;" >> "$INIT_FILE"
     chmod 660 "$INIT_FILE"
     chown mysql:mysql "$INIT_FILE"
 }
