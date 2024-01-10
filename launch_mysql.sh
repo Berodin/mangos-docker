@@ -65,7 +65,7 @@ initialize_db() {
 # Start MariaDB Server in background and wait for it to be ready
 start_and_wait_for_mysql_server() {
     local SOCKET="$1"
-    mysqld --skip-networking --socket="${SOCKET}" &
+    mysqld --skip-networking --skip-grant-tables --socket="${SOCKET}" &
     pid="$!"
     log "Starting MariaDB server with command: $@ --skip-networking --socket=${SOCKET}"
     log "MariaDB server started in background with PID $pid"
