@@ -6,7 +6,6 @@ set -eo pipefail
 shopt -s nullglob
 
 LOG_FILE="/tmp/logfile.log"
-INIT_FILE="/tmp/init.sql"
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$LOG_FILE"
 }
@@ -14,6 +13,8 @@ log() {
 log "Starting script execution."
 
 # Default values for environment variables
+MYSQL_PRIVILEGED_USER="mysql"
+MYSQL_PRIVILEGED_USER_PASSWORD=${MYSQL_PRIVILEGED_USER_PASSWORD:-"changeit"}
 MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-"mangos"}
 MYSQL_USER=${MYSQL_USER:-"mangos"}
 MYSQL_PASSWORD=${MYSQL_PASSWORD:-"mangos"}
@@ -55,9 +56,8 @@ set_datadir_permissions() {
 initialize_db() {
     log "Checking if MariaDB system tables need initialization."
     if [ ! -d "$DATADIR/mysql" ]; then
-        create_init_file
         log "Initializing MariaDB system tables."
-        mariadb-install-db --user=mysql --init-file=/tmp/init.sql
+        mariadb-install-db --user=mysql
         log "MariaDB system tables initialized."
     else
         log "MariaDB system tables already exist."
@@ -67,12 +67,18 @@ initialize_db() {
 # Start MariaDB Server in background and wait for it to be ready
 start_and_wait_for_mysql_server() {
     local SOCKET="$1"
-    mysqld --skip-networking --skip-grant-tables --socket="${SOCKET}" &
+    mysqld --skip-networking --skip-grant-tables --socket="${SOCKET}" & &
     pid="$!"
     log "Starting MariaDB server with command: $@ --skip-networking --socket=${SOCKET}"
     log "MariaDB server started in background with PID $pid"
 
-    local mysql_command=( mysql --protocol=socket -uroot -hlocalhost --socket="$SOCKET" )
+    #set password for db user mysql
+    "${mysql_command[@]}" <<-EOSQL
+        ALTER USER 'mysql'@'localhost' IDENTIFIED BY '${MYSQL_PRIVILEGED_USER_PASSWORD}';
+        FLUSH PRIVILEGES;
+EOSQL
+
+    local mysql_command=( mysql --protocol=socket -u${MYSQL_PRIVILEGED_USER} -p${MYSQL_PRIVILEGED_USER_PASSWORD} -hlocalhost --socket="$SOCKET" )
     for i in {30..0}; do
         if echo 'SELECT 1' | "${mysql_command[@]}" &> /dev/null; then
             log "MariaDB server is ready."
@@ -82,35 +88,51 @@ start_and_wait_for_mysql_server() {
         sleep 1
     done
     log "MariaDB init process failed."
-    exit 1
+
 }
 
-# Create an init file for setting up initial root user and additional users
-create_init_file() {
-    echo "SET @@SESSION.SQL_LOG_BIN=0;" > "$INIT_FILE"
-    echo "DELETE FROM mysql.user WHERE user NOT IN ('mysql.sys', 'mysqlxsys', 'root') OR host NOT IN ('localhost');" >> "$INIT_FILE"
-    echo "ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';" >> "$INIT_FILE"
-    echo "GRANT ALL ON *.* TO 'root'@'localhost' WITH GRANT OPTION;" >> "$INIT_FILE"
-    echo "DROP DATABASE IF EXISTS test;" >> "$INIT_FILE"
-    echo "FLUSH PRIVILEGES;" >> "$INIT_FILE"
+# Create users and set permissions
+setup_users_and_permissions() {
+    log "Setting up users and permissions."
+    log "execute mysql --protocol=socket -u${MYSQL_PRIVILEGED_USER} -p${MYSQL_PRIVILEGED_USER_PASSWORD} -hlocalhost --socket=$1"
+    local mysql_command=( mysql --protocol=socket -u${MYSQL_PRIVILEGED_USER} -p${MYSQL_PRIVILEGED_USER_PASSWORD} -hlocalhost --socket="$1" )
 
+    # Root user setup
+    log "Creating root user." 
+    "${mysql_command[@]}" <<-EOSQL 2>&1 | tee -a "$LOG_FILE"
+        SET @@SESSION.SQL_LOG_BIN=0;
+        DELETE FROM mysql.user WHERE user NOT IN ('mysql.sys', 'mysqlxsys', 'root') OR host NOT IN ('localhost');
+        ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
+        GRANT ALL ON *.* TO 'root'@'localhost' WITH GRANT OPTION;
+        DROP DATABASE IF EXISTS test;
+        FLUSH PRIVILEGES;
+EOSQL
+
+    # after creating root user with password it is needed to change to login by password
+
+    log "execute user creation with new mysql command: $mysql_command"
+    log "should be equivalent to mysql --protocol=socket -uroot -p${MYSQL_ROOT_PASSWORD} -hlocalhost --socket=$1"
     # Application user setup
-    echo "CREATE USER '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';" >> "$INIT_FILE"
-    echo "GRANT ALL ON \`${MYSQL_DATABASE}\`.* TO '${MYSQL_USER}'@'%';" >> "$INIT_FILE"
+    log "Creating application user: $MYSQL_USER." 
+    "${mysql_command[@]}" <<-EOSQL 2>&1 | tee -a "$LOG_FILE"
+        CREATE USER '$MYSQL_USER'@'%' IDENTIFIED BY '$MYSQL_PASSWORD';
+        GRANT ALL ON \`$MYSQL_DATABASE\`.* TO '$MYSQL_USER'@'%';
+        FLUSH PRIVILEGES;
+EOSQL
 
-    # Infoschema user setup
-    echo "CREATE USER '${MYSQL_INFOSCHEMA_USER}'@'localhost' IDENTIFIED BY '${MYSQL_INFOSCHEMA_PASS}';" >> "$INIT_FILE"
-    echo "GRANT SELECT ON mysql.* TO '${MYSQL_INFOSCHEMA_USER}'@'localhost';" >> "$INIT_FILE"
-
-    echo "FLUSH PRIVILEGES;" >> "$INIT_FILE"
-    chmod 660 "$INIT_FILE"
-    chown mysql:mysql "$INIT_FILE"
+    # infoschema user setup
+    log "Creating infoschema user: $MYSQL_INFOSCHEMA_USER."
+    "${mysql_command[@]}" <<-EOSQL 2>&1 | tee -a "$LOG_FILE"
+        CREATE USER '$MYSQL_INFOSCHEMA_USER'@'localhost' IDENTIFIED BY '$MYSQL_INFOSCHEMA_PASS';
+        GRANT SELECT ON mysql.* TO '$MYSQL_INFOSCHEMA_USER'@'localhost';
+        FLUSH PRIVILEGES;
+EOSQL
 }
 
 # Load database schemas and data
 load_database_data() {
     log "Loading database data for server version: $MANGOS_SERVER_VERSION."
-    local mysql_command=( mysql --protocol=socket -u${MYSQL_USER} -hlocalhost --socket="$1" -p"${MYSQL_PASSWORD}" )
+    local mysql_command=( mysql --protocol=socket -u${MYSQL_PRIVILEGED_USER} -p${MYSQL_PRIVILEGED_USER_PASSWORD} -hlocalhost --socket="$1")
 
     # Load World, Character, and Realm databases
     log "Loading World, Character, and Realm databases."
@@ -137,7 +159,7 @@ EOSQL
 # Apply database updates in sorted order
 apply_database_updates() {
     log "Applying database updates."
-    local mysql_command=( mysql --protocol=socket -u${MYSQL_USER} -hlocalhost --socket="$1" -p"${MYSQL_PASSWORD}" )
+    local mysql_command=( mysql --protocol=socket -u${MYSQL_PRIVILEGED_USER} -p${MYSQL_PRIVILEGED_USER_PASSWORD}-hlocalhost --socket="$1" )
 
     # Apply updates in /Realm_DB/Updates/Rel21/ first
     for f in $(find /Realm_DB/Updates/Rel21/ -name '*.sql' | sort); do
@@ -184,13 +206,13 @@ if [ "$1" = 'mysqld' ]; then
     fi
 
     if [ ! -d "$DATADIR/mysql" ]; then
-        touch $INIT_FILE
         initialize_db
         start_and_wait_for_mysql_server "$SOCKET"
         mysql_upgrade --force --user=mysql
+        start_mysql_server "$SOCKET" "$@"
+        wait_for_mysql "$SOCKET"
+        setup_users_and_permissions "$SOCKET"
         load_database_data "$SOCKET"
-        kill $pid
-        wait $pid
     fi
 
     # Always apply database updates
