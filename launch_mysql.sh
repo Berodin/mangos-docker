@@ -57,7 +57,7 @@ initialize_db() {
     if [ ! -d "$DATADIR/mysql" ]; then
         create_init_file
         log "Initializing MariaDB system tables."
-        mariadb-install-db --user=mysql
+        mysqld --initialize --user=mysql --init-file="$INIT_FILE"
         log "MariaDB system tables initialized."
     else
         log "MariaDB system tables already exist."
@@ -201,6 +201,7 @@ if [ "$1" = 'mysqld' ]; then
     fi
 
     if [ ! -d "$DATADIR/mysql" ]; then
+        touch $INIT_FILE
         initialize_db
         start_and_wait_for_mysql_server "$SOCKET"
         setup_users_and_permissions "$SOCKET"
