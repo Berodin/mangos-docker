@@ -160,13 +160,15 @@ apply_database_updates() {
 
     # Apply updates for Character database
     for f in $(find /database/Character/Updates -name '*.sql' | sort); do
-        log "Applying update $f in Character database: $f"
+        log "Applying update $f in Character database: ${MANGOS_CHARACTER_DB}"
+        log "${mysql_command[@]} -D${MANGOS_CHARACTER_DB}"
         "${mysql_command[@]}" -D${MANGOS_CHARACTER_DB} < "$f"
     done
 
     # Apply updates for World database
     for f in $(find /database/World/Updates -name '*.sql' | sort); do
-        log "Applying update $f in World database: $f"
+        log "Applying update $f in World database: ${MANGOS_WORLD_DB}"
+        log "${mysql_command[@]} -D${MANGOS_WORLD_DB}"
         "${mysql_command[@]}" -D${MANGOS_WORLD_DB} < "$f"
     done
 
