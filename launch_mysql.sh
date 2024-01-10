@@ -211,8 +211,7 @@ if [ "$1" = 'mysqld' ]; then
         start_and_wait_for_mysql_server "$SOCKET"
         apply_database_updates "$SOCKET"
         log 'MySQL init process done. Ready for start up.'
-
-    log 'MySQL init process done. Ready for start up.'
+    fi
 fi
 
 exec "$@"
