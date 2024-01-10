@@ -110,7 +110,7 @@ create_init_file() {
 # Load database schemas and data
 load_database_data() {
     log "Loading database data for server version: $MANGOS_SERVER_VERSION."
-    local mysql_command=( mysql --protocol=socket -uroot -hlocalhost --socket="$1" -p"${MYSQL_ROOT_PASSWORD}" )
+    local mysql_command=( mysql --protocol=socket -u${MYSQL_USER} -hlocalhost --socket="$1" -p"${MYSQL_PASSWORD}" )
 
     # Load World, Character, and Realm databases
     log "Loading World, Character, and Realm databases."
@@ -137,7 +137,7 @@ EOSQL
 # Apply database updates in sorted order
 apply_database_updates() {
     log "Applying database updates."
-    local mysql_command=( mysql --protocol=socket -uroot -hlocalhost --socket="$1" -p"${MYSQL_ROOT_PASSWORD}" )
+    local mysql_command=( mysql --protocol=socket -u${MYSQL_USER} -hlocalhost --socket="$1" -p"${MYSQL_PASSWORD}" )
 
     # Apply updates in /Realm_DB/Updates/Rel21/ first
     for f in $(find /Realm_DB/Updates/Rel21/ -name '*.sql' | sort); do
