@@ -67,12 +67,12 @@ initialize_db() {
 # Start MariaDB Server in background and wait for it to be ready
 start_and_wait_for_mysql_server() {
     local SOCKET="$1"
-    mysqld --skip-networking --skip-grant-tables --socket="${SOCKET}" &
+    mysqld --skip-networking --socket="${SOCKET}" &
     pid="$!"
     log "Starting MariaDB server with command: $@ --skip-networking --socket=${SOCKET}"
     log "MariaDB server started in background with PID $pid"
 
-    local mysql_command=( mysql --protocol=socket -uroot -hlocalhost --socket="$SOCKET" )
+    local mysql_command=( mysql --protocol=socket -uroot -p"${MYSQL_ROOT_PASSWORD}" -hlocalhost --socket="$SOCKET" )
     for i in {30..0}; do
         if echo 'SELECT 1' | "${mysql_command[@]}" &> /dev/null; then
             log "MariaDB server is ready."
@@ -89,7 +89,7 @@ start_and_wait_for_mysql_server() {
 create_init_file() {
     echo "SET @@SESSION.SQL_LOG_BIN=0;" > "$INIT_FILE"
     echo "DELETE FROM mysql.user WHERE user NOT IN ('mysql.sys', 'mysqlxsys', 'root') OR host NOT IN ('localhost');" >> "$INIT_FILE"
-    echo "ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';" >> "$INIT_FILE"
+    echo "ALTER USER 'root'@'localhost' IDENTIFIED BY ${MYSQL_ROOT_PASSWORD};" >> "$INIT_FILE"
     echo "FLUSH PRIVILEGES;" >> "$INIT_FILE"
     echo "GRANT ALL ON *.* TO 'root'@'localhost' WITH GRANT OPTION;" >> "$INIT_FILE"
     echo "DROP DATABASE IF EXISTS test;" >> "$INIT_FILE"
@@ -110,7 +110,7 @@ setup_users_and_permissions() {
     # Application user setup
     log "Creating application user: $MYSQL_USER." 
     "${mysql_command[@]}" <<-EOSQL 2>&1 | tee -a "$LOG_FILE"
-        CREATE USER '$MYSQL_USER'@'%' IDENTIFIED WITH 'caching_sha2_password' BY '$MYSQL_PASSWORD';
+        CREATE USER '$MYSQL_USER'@'%' IDENTIFIED WITH 'mysql_native_password' BY '$MYSQL_PASSWORD';
         GRANT ALL ON \`$MYSQL_DATABASE\`.* TO '$MYSQL_USER'@'%';
         FLUSH PRIVILEGES;
 EOSQL
@@ -118,7 +118,7 @@ EOSQL
     # infoschema user setup
     log "Creating infoschema user: $MYSQL_INFOSCHEMA_USER."
     "${mysql_command[@]}" <<-EOSQL 2>&1 | tee -a "$LOG_FILE"
-        CREATE USER '$MYSQL_INFOSCHEMA_USER'@'localhost' IDENTIFIED WITH 'caching_sha2_password' BY '$MYSQL_INFOSCHEMA_PASS';
+        CREATE USER '$MYSQL_INFOSCHEMA_USER'@'localhost' IDENTIFIED WITH 'mysql_native_password' BY '$MYSQL_INFOSCHEMA_PASS';
         GRANT SELECT ON mysql.* TO '$MYSQL_INFOSCHEMA_USER'@'localhost';
         FLUSH PRIVILEGES;
 EOSQL
