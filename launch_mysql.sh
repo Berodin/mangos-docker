@@ -187,7 +187,6 @@ if [ "$1" = 'mysqld' ]; then
         touch $INIT_FILE
         initialize_db
         start_and_wait_for_mysql_server "$SOCKET"
-        setup_users_and_permissions "$SOCKET"
         mysql_upgrade --force --user=mysql
         load_database_data "$SOCKET"
         kill $pid
