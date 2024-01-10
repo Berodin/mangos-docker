@@ -201,8 +201,6 @@ if [ "$1" = 'mysqld' ]; then
         initialize_db
         start_and_wait_for_mysql_server "$SOCKET"
         mysql_upgrade --force --user=mysql
-        start_mysql_server "$SOCKET" "$@"
-        wait_for_mysql "$SOCKET"
         setup_users_and_permissions "$SOCKET"
         load_database_data "$SOCKET"
     fi
