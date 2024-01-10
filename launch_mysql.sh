@@ -131,8 +131,16 @@ load_database_data() {
     log "Loading World, Character, and Realm databases."
     "${mysql_command[@]}" < /database/World/Setup/mangosdCreateDB.sql
     "${mysql_command[@]}" -D${MANGOS_WORLD_DB} < /database/World/Setup/mangosdLoadDB.sql
+
+    # Load FullDB data for World database
+    for f in $(find /database/World/Setup/FullDB -name '*.sql' | sort); do
+        log "Applying FullDB data: $f"
+        "${mysql_command[@]}" -D${MANGOS_WORLD_DB} < "$f"
+    done
+
     "${mysql_command[@]}" < /database/Character/Setup/characterCreateDB.sql
-    "${mysql_command[@]}"  -D${MANGOS_CHARACTER_DB} < /database/Character/Setup/characterLoadDB.sql
+    "${mysql_command[@]}" -D${MANGOS_CHARACTER_DB} < /database/Character/Setup/characterLoadDB.sql
+
     "${mysql_command[@]}" <<-EOSQL
         CREATE DATABASE realmd DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
         GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, ALTER, LOCK TABLES ON \`realmd\`.* TO 'mangos'@'%';
