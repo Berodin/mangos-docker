@@ -102,7 +102,9 @@ setup_users_and_permissions() {
 EOSQL
 
     # after creating root user with password it is needed to change to login by password
-    local mysql_command=( mysql --protocol=socket -uroot -p"${MYSQL_ROOT_PASSWORD}" -hlocalhost --socket="$1" )
+    mysql_command=( mysql --protocol=socket -uroot -p${MYSQL_ROOT_PASSWORD} -hlocalhost --socket="$1" )
+    log "execute user creation with new mysql command: $mysql_command"
+    log "should be equivalent to mysql --protocol=socket -uroot -p${MYSQL_ROOT_PASSWORD} -hlocalhost --socket=$1
     # Application user setup
     log "Creating application user: $MYSQL_USER." 
     "${mysql_command[@]}" <<-EOSQL 2>&1 | tee -a "$LOG_FILE"
