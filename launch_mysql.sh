@@ -67,10 +67,12 @@ initialize_db() {
 # Start MariaDB Server in background and wait for it to be ready
 start_and_wait_for_mysql_server() {
     local SOCKET="$1"
-    mysqld --skip-networking --skip-grant-tables --socket="${SOCKET}" & pid="$!"
+    mysqld --skip-networking --socket="${SOCKET}" & 
+    pid="$!"
     log "Starting MariaDB server with command: $@ --skip-networking --socket=${SOCKET}"
     log "MariaDB server started in background with PID $pid"
 
+    sleep 30
     mysql_command=( mysql --protocol=socket -u${MYSQL_PRIVILEGED_USER} -hlocalhost --socket="$SOCKET")
     #set password for db user mysql
     "${mysql_command[@]}" <<-EOSQL
