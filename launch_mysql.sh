@@ -67,12 +67,12 @@ initialize_db() {
 # Start MariaDB Server in background and wait for it to be ready
 start_and_wait_for_mysql_server() {
     local SOCKET="$1"
-    mysqld --skip-networking --socket="${SOCKET}" &
+    mysqld --skip-networking --skip-grant-tables --socket="${SOCKET}" &
     pid="$!"
     log "Starting MariaDB server with command: $@ --skip-networking --socket=${SOCKET}"
     log "MariaDB server started in background with PID $pid"
 
-    local mysql_command=( mysql --protocol=socket -uroot -p"${MYSQL_ROOT_PASSWORD}" -hlocalhost --socket="$SOCKET" )
+    local mysql_command=( mysql --protocol=socket -uroot -hlocalhost --socket="$SOCKET" )
     for i in {30..0}; do
         if echo 'SELECT 1' | "${mysql_command[@]}" &> /dev/null; then
             log "MariaDB server is ready."
@@ -189,16 +189,9 @@ apply_database_updates() {
 if [ "$1" = 'mysqld' ]; then
     DATADIR=$(get_config 'datadir' "$@")
     set_datadir_permissions "$DATADIR"
-
+    setup_log_file
     SOCKET=$(get_config 'socket' "$@")
     log "Data directory: $DATADIR, Socket: $SOCKET"
-
-    if [ "$(id -u)" = '0' ]; then
-        setup_log_file
-        set_datadir_permissions "$DATADIR"
-        log "Executing script with gosu as mysql user"
-        exec gosu mysql "$BASH_SOURCE" "$@"
-    fi
 
     if [ ! -d "$DATADIR/mysql" ]; then
         touch $INIT_FILE
@@ -207,10 +200,18 @@ if [ "$1" = 'mysqld' ]; then
         setup_users_and_permissions "$SOCKET"
         mysql_upgrade --force --user=mysql
         load_database_data "$SOCKET"
+        kill $pid
+        wait $pid
     fi
 
-    # Always apply database updates
-    apply_database_updates "$SOCKET"
+    # Start the server normally with gosu for regular operations
+    if [ "$(id -u)" = '0' ]; then
+        exec gosu mysql "$BASH_SOURCE" "$@"
+    else
+        start_and_wait_for_mysql_server "$SOCKET"
+        apply_database_updates "$SOCKET"
+        log 'MySQL init process done. Ready for start up.'
+
     log 'MySQL init process done. Ready for start up.'
 fi
 
