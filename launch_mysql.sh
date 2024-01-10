@@ -30,6 +30,7 @@ MANGOS_CHARACTER_DB=character${MANGOS_SERVER_VERSION}
 setup_log_file() {
     touch "$LOG_FILE"
     chown mysql:mysql "$LOG_FILE"
+    chmod 777 /tmp
     chmod 660 "$LOG_FILE"
 }
 
@@ -49,40 +50,38 @@ set_datadir_permissions() {
     chown -R mysql:mysql "$DATADIR"
 }
 
-# Initialize MySQL Database
-initialize_mysql() {
-    log "Initializing MySQL Database."
-    "$@" --initialize-insecure
-    log "Database initialized."
+# Initialize MariaDB Database
+initialize_db() {
+    log "Checking if MariaDB system tables need initialization."
+    if [ ! -d "$DATADIR/mysql" ]; then
+        log "Initializing MariaDB system tables."
+        mariadb-install-db --user=mysql
+        log "MariaDB system tables initialized."
+    else
+        log "MariaDB system tables already exist."
+    fi
 }
 
-# Start MySQL Server in background
-start_mysql_server() {
+# Start MariaDB Server in background and wait for it to be ready
+start_and_wait_for_mysql_server() {
     local SOCKET="$1"
     mysqld --skip-networking --socket="${SOCKET}" &
     pid="$!"
-    log "Starting MySQL server with command: $@ --skip-networking --socket=${SOCKET}"
-    log "MySQL server started in background with PID $pid"
-}
+    log "Starting MariaDB server with command: $@ --skip-networking --socket=${SOCKET}"
+    log "MariaDB server started in background with PID $pid"
 
-# Wait for MySQL Server readiness
-wait_for_mysql() {
-    local mysql_command=( mysql --protocol=socket -uroot -hlocalhost --socket="$1" )
-    for i in {60..0}; do
+    local mysql_command=( mysql --protocol=socket -uroot -hlocalhost --socket="$SOCKET" )
+    for i in {30..0}; do
         if echo 'SELECT 1' | "${mysql_command[@]}" &> /dev/null; then
-            break
+            log "MariaDB server is ready."
+            return
         fi
-        log "Waiting for MySQL server to be ready..."
+        log "Waiting for MariaDB server to be ready..."
         sleep 1
     done
-    if [ "$i" = 0 ]; then
-        log "MySQL init process failed."
-        exit 1
-    fi
-    log "MySQL server is ready."
-    sleep 5
+    log "MariaDB init process failed."
+    exit 1
 }
-
 
 # Create users and set permissions
 setup_users_and_permissions() {
@@ -192,17 +191,16 @@ if [ "$1" = 'mysqld' ]; then
     log "Data directory: $DATADIR, Socket: $SOCKET"
 
     if [ "$(id -u)" = '0' ]; then
-        set_datadir_permissions "$DATADIR"
         setup_log_file
-        log "execute script again through gosu as mysql: gosu mysql $BASH_SOURCE $@"
+        set_datadir_permissions "$DATADIR"
+        log "Executing script with gosu as mysql user"
         exec gosu mysql "$BASH_SOURCE" "$@"
-    else
-        log "Running mysqld as non-root user, so script was restartet with gosu: $BASH_SOURCE $@"
     fi
 
     if [ ! -d "$DATADIR/mysql" ]; then
-        
-        initialize_mysql "$@"
+        initialize_db
+        start_and_wait_for_mysql_server "$SOCKET"
+        mysql_upgrade --force --user=mysql
         start_mysql_server "$SOCKET" "$@"
         wait_for_mysql "$SOCKET"
         setup_users_and_permissions "$SOCKET"
