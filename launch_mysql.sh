@@ -158,13 +158,16 @@ apply_database_updates() {
         "${mysql_command[@]}" -Drealmd < "$f"
     done
 
-    # Apply updates for World, Character, and other Realm updates
-    for dir in /database/{Character,World}/Updates; do
-        for f in $(find $dir -name '*.sql' | sort); do
-            local database=$(basename $dir)  # Extracts 'World', 'Character' from the path
-            log "Applying update $f in $database database: $f"
-            "${mysql_command[@]}" -D${MANGOS_WORLD_DB} < "$f"
-        done
+    # Apply updates for Character database
+    for f in $(find /database/Character/Updates -name '*.sql' | sort); do
+        log "Applying update $f in Character database: $f"
+        "${mysql_command[@]}" -D${MANGOS_CHARACTER_DB} < "$f"
+    done
+
+    # Apply updates for World database
+    for f in $(find /database/World/Updates -name '*.sql' | sort); do
+        log "Applying update $f in World database: $f"
+        "${mysql_command[@]}" -D${MANGOS_WORLD_DB} < "$f"
     done
 
     log "Databases updated."
