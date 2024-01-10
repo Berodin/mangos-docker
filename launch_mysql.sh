@@ -51,11 +51,11 @@ set_datadir_permissions() {
 }
 
 # Initialize MySQL Database
-#initialize_mysql() {
-#    log "Initializing MySQL Database."
-#    "$@" --initialize-insecure
-#    log "Database initialized."
-#}
+initialize_db() {
+    log "Initializing MariaDB system tables."
+    mariadb-install-db --user=mysql
+    log "MariaDB system tables initialized."
+}
 
 # Start MySQL Server in background
 start_mysql_server() {
@@ -187,6 +187,7 @@ apply_database_updates() {
 # Main execution logic
 if [ "$1" = 'mysqld' ]; then
     DATADIR=$(get_config 'datadir' "$@")
+    initialize_db "$@"
     set_datadir_permissions "$DATADIR"
 
     SOCKET=$(get_config 'socket' "$@")
@@ -203,7 +204,6 @@ if [ "$1" = 'mysqld' ]; then
 
     if [ ! -d "$DATADIR/mysql" ]; then
         
-        #initialize_mysql "$@"
         start_mysql_server "$SOCKET" "$@"
         wait_for_mysql "$SOCKET"
         setup_users_and_permissions "$SOCKET"
