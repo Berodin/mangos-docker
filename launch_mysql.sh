@@ -159,10 +159,10 @@ apply_database_updates() {
     done
 
     # Apply updates for World, Character, and other Realm updates
-    for dir in /database/{World,Character}/Updates; do
+    for dir in /database/{Character,World}/Updates; do
         for f in $(find $dir -name '*.sql' | sort); do
             local database=$(basename $dir)  # Extracts 'World', 'Character' from the path
-            log "Applying update in $database database: $f"
+            log "Applying update $f in $database database: $f"
             "${mysql_command[@]}" -D${MANGOS_WORLD_DB} < "$f"
         done
     done
