@@ -25,8 +25,8 @@ MANGOS_DB_RELEASE=${MANGOS_DB_RELEASE:-"Rel22"}
 MYSQL_ROOT_HOST=${MYSQL_ROOT_HOST:-"%"}
 MYSQL_INFOSCHEMA_USER=mysql.infoschema
 MYSQL_INFOSCHEMA_PASS="${MYSQL_INFOSCHEMA_PASS:-changeit}"
-MANGOS_WORLD_DB=mangos${MANGOS_SERVER_VERSION}
-MANGOS_CHARACTER_DB=character${MANGOS_SERVER_VERSION}
+MANGOS_WORLD_DB=mangos${MANGOS_SERVER_VERSION:-"2"}
+MANGOS_CHARACTER_DB=character${MANGOS_SERVER_VERSION-"2"}
 
 # Check and set permissions for log file
 setup_log_file() {
@@ -96,24 +96,17 @@ EOSQL
 # Create users and set permissions
 setup_users_and_permissions() {
     log "Setting up users and permissions."
-    log "execute mysql --protocol=socket -u${MYSQL_PRIVILEGED_USER} -p${MYSQL_PRIVILEGED_USER_PASSWORD} -hlocalhost --socket=$1"
     local mysql_command=( mysql --protocol=socket -u${MYSQL_PRIVILEGED_USER} -p${MYSQL_PRIVILEGED_USER_PASSWORD} -hlocalhost --socket="$1" )
 
     # Root user setup
     log "Creating root user." 
     "${mysql_command[@]}" <<-EOSQL 2>&1 | tee -a "$LOG_FILE"
-        SET @@SESSION.SQL_LOG_BIN=0;
-        DELETE FROM mysql.user WHERE user NOT IN ('mysql.sys', 'mysqlxsys', 'root') OR host NOT IN ('localhost');
         ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
         GRANT ALL ON *.* TO 'root'@'localhost' WITH GRANT OPTION;
         DROP DATABASE IF EXISTS test;
         FLUSH PRIVILEGES;
 EOSQL
 
-    # after creating root user with password it is needed to change to login by password
-
-    log "execute user creation with new mysql command: $mysql_command"
-    log "should be equivalent to mysql --protocol=socket -uroot -p${MYSQL_ROOT_PASSWORD} -hlocalhost --socket=$1"
     # Application user setup
     log "Creating application user: $MYSQL_USER." 
     "${mysql_command[@]}" <<-EOSQL 2>&1 | tee -a "$LOG_FILE"
@@ -161,7 +154,7 @@ EOSQL
 # Apply database updates in sorted order
 apply_database_updates() {
     log "Applying database updates."
-    local mysql_command=( mysql --protocol=socket -u${MYSQL_PRIVILEGED_USER} -p${MYSQL_PRIVILEGED_USER_PASSWORD}-hlocalhost --socket="$1" )
+    local mysql_command=( mysql --protocol=socket -u${MYSQL_PRIVILEGED_USER} -p${MYSQL_PRIVILEGED_USER_PASSWORD} -hlocalhost --socket="$1" )
 
     # Apply updates in /Realm_DB/Updates/Rel21/ first
     for f in $(find /Realm_DB/Updates/Rel21/ -name '*.sql' | sort); do
@@ -210,9 +203,6 @@ if [ "$1" = 'mysqld' ]; then
     if [ ! -d "$DATADIR/mysql" ]; then
         initialize_db
         start_and_wait_for_mysql_server "$SOCKET"
-        mysql_upgrade --force --user=mysql
-        start_mysql_server "$SOCKET" "$@"
-        wait_for_mysql "$SOCKET"
         setup_users_and_permissions "$SOCKET"
         load_database_data "$SOCKET"
     fi
@@ -220,6 +210,7 @@ if [ "$1" = 'mysqld' ]; then
     # Always apply database updates
     apply_database_updates "$SOCKET"
     log 'MySQL init process done. Ready for start up.'
+	kill $pid
 fi
 
 exec "$@"
