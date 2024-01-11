@@ -14,7 +14,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Run stage
-FROM mariadb:11.0
+FROM mariadb:10.6.16
 
 # Copy artifacts from the build stage
 COPY --from=builder /database /database

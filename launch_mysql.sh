@@ -185,6 +185,14 @@ apply_database_updates() {
     log "Databases updated."
 }
 
+add_reamlist() {
+    log "Add realmlist to DB"
+	local mysql_command=( mysql --protocol=socket -u${MYSQL_PRIVILEGED_USER} -p${MYSQL_PRIVILEGED_USER_PASSWORD} -hlocalhost --socket="$1" )
+    "${mysql[@]}" -Drealmd <<-EOSQL
+		INSERT INTO realmlist (name,realmbuilds) VALUES ('${MANGOS_DATABASE_REALM_NAME}','12340') ;
+EOSQL
+}
+
 # Main execution logic
 if [ "$1" = 'mysqld' ]; then
     DATADIR=$(get_config 'datadir' "$@")
@@ -205,6 +213,7 @@ if [ "$1" = 'mysqld' ]; then
         start_and_wait_for_mysql_server "$SOCKET"
         setup_users_and_permissions "$SOCKET"
         load_database_data "$SOCKET"
+        add_reamlist
     fi
 
     # Always apply database updates
