@@ -188,7 +188,7 @@ apply_database_updates() {
 add_reamlist() {
     log "Add realmlist to DB"
 	local mysql_command=( mysql --protocol=socket -u${MYSQL_PRIVILEGED_USER} -p${MYSQL_PRIVILEGED_USER_PASSWORD} -hlocalhost --socket="$1" )
-    "${mysql[@]}" -Drealmd <<-EOSQL
+    "${mysql_command[@]}" -Drealmd <<-EOSQL
 		INSERT INTO realmlist (name,realmbuilds) VALUES ('${MANGOS_DATABASE_REALM_NAME}','12340') ;
 EOSQL
 }
