@@ -30,9 +30,9 @@ MANGOS_CHARACTER_DB=character${MANGOS_SERVER_VERSION-"2"}
 
 # Check and set permissions for log file
 setup_log_file() {
+    chmod 777 /tmp
     touch "$LOG_FILE"
     chown mysql:mysql "$LOG_FILE"
-    chmod 777 /tmp
     chmod 660 "$LOG_FILE"
 }
 
