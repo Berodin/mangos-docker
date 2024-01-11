@@ -40,6 +40,11 @@ spec:
                 secretKeyRef:
                   name: mangos-secret
                   key: MYSQL_PASSWORD
+            - name: MYSQL_PRIVILEGED_USER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mangos-secret
+                  key: MYSQL_PRIVILEGED_USER_PASSWORD   
             - name: MYSQL_DATABASE
               value: "{{ .Values.mysql.database }}"
             - name: MANGOS_DATABASE_REALM_NAME
