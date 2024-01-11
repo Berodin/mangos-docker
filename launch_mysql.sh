@@ -235,6 +235,7 @@ main() {
 		start_mysql_server "$SOCKET"
         setup_users_and_permissions "$SOCKET"
         load_database_data "$SOCKET"
+        add_reamlist
 	else
 		# No initialization needed, just start the DB and apply updates
 		log "DB is already initialized, just applying updates if applicable."
