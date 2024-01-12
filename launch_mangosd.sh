@@ -35,6 +35,6 @@ fi
 # populate template with env vars
 sed -i 's,LoginDatabaseInfo.*=.*,LoginDatabaseInfo = '"$(echo $LOGIN_DATABASE_INFO | sed 's/[;&]/\\&/g')"',g' $CONFIGS/mangosd.conf
 sed -i 's,WorldDatabaseInfo.*=.*,WorldDatabaseInfo = '"$(echo $WORLD_DATABASE_INFO | sed 's/[;&]/\\&/g')"',g' $CONFIGS/mangosd.conf
-sed -i 's,CharacterDatabaseInfo.*=.*,CharacterDatabaseInfo = '"$(echo $WORLD_DATABASE_INFO | sed 's/[;&]/\\&/g')"',g' $CONFIGS/mangosd.conf
+sed -i 's,CharacterDatabaseInfo.*=.*,CharacterDatabaseInfo = '"$(echo $CHARACTER_DATABASE_INFO | sed 's/[;&]/\\&/g')"',g' $CONFIGS/mangosd.conf
 sed -i 's,'/server/install/etc/','/etc/mangos/',' $CONFIGS/mangosd.conf
 ${BINDIR}/mangosd -c $CONFIGS/mangosd.conf ${AHCONFIG}
