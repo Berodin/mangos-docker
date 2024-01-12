@@ -67,7 +67,7 @@ initialize_db() {
 
 start_mysql_server() {
     local socket="$1"
-    mysqld --skip-networking --socket="$socket" > /tmp/mysqld.log 2>&1 &
+    mysqld --socket="$socket" > /tmp/mysqld.log 2>&1 &
     pid=$!
     log "MariaDB server started with PID $pid"
 	
