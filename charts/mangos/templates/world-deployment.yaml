@@ -64,7 +64,7 @@ spec:
             - name: "mangos-world"
               containerPort: 8085
           volumeMounts:
-            - name: mangos-data
+            - name: mangos-configdata
               mountPath: /tmp
             - name: mangos-serverdata
               mountPath: /etc/mangos
@@ -86,7 +86,7 @@ spec:
         - name: mangos-serverdata
           persistentVolumeClaim:
             claimName: {{ .Values.world.persistentVolume.serverdata.existingClaimName }}
-        - name: mangos-data
+        - name: mangos-configdata
           persistentVolumeClaim:
             claimName: {{ .Values.world.persistentVolume.configdata.existingClaimName }}
       {{- with .Values.world.nodeSelector }}
