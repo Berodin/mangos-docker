@@ -35,6 +35,7 @@ spec:
               mountPath: /etc/mangos
             - name: var-etc-mangos
               mountPath: /var/etc/mangos
+
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}-world
@@ -89,6 +90,8 @@ spec:
         - name: mangos-configdata
           persistentVolumeClaim:
             claimName: {{ .Values.world.persistentVolume.configdata.existingClaimName }}
+        - name: var-etc-mangos
+          emptyDir: {}
       {{- with .Values.world.nodeSelector }}
       nodeSelector:
 {{ toYaml . | indent 8 }}
