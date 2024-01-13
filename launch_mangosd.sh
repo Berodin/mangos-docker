@@ -51,4 +51,4 @@ sed -i 's,'/server/install/etc/','/etc/mangos/',' $CONFIGS/mangosd.conf
 
 # move serverfiles from temporary path /var/etc/mangos to PV mounted NFS path /etc/mangos
 cp -r /var/etc/mangos/* /etc/mangos/ && rm -rf /var/etc/mangos/*
-${BINDIR}/mangosd -c $CONFIGS/mangosd.conf ${AHCONFIG}
+${BINDIR}/mangosd -c $CONFIGS/mangosd.conf ${AHCONFIG} &
