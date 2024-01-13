@@ -61,18 +61,6 @@ spec:
               mountPath: /tmp
             - name: mangos-serverdata
               mountPath: /etc/mangos
-          livenessProbe:
-            tcpSocket:
-              port: 8085
-            initialDelaySeconds: 120
-            periodSeconds: 10
-            timeoutSeconds: 5
-          readinessProbe:
-            tcpSocket:
-              port: 8085
-            initialDelaySeconds: 120
-            periodSeconds: 10
-            timeoutSeconds: 5
           resources:
 {{ toYaml .Values.world.resources | indent 12 }}
       volumes:
