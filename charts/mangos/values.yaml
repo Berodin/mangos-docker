@@ -13,7 +13,7 @@ wowVersion: 0
 
 # Realm/auth server settings
 realmd:
-  initContainer: 
+  initContainer:
     enabled: false
   replicaCount: 1
 
@@ -24,7 +24,7 @@ realmd:
   image:
     pullPolicy: IfNotPresent
     tag: latest
-    repository: 
+    repository:
 
   service:
     type: NodePort
@@ -43,17 +43,21 @@ realmd:
 
 # World server settings
 world:
-  initContainer: 
+  initContainer:
     enabled: false
   replicaCount: 1
- 
+
   persistentVolume:
     enabled: false
-    existingClaimName: ""
+    serverdata:
+      existingClaimName: ""
+    configdata:
+      existingClaimName: ""
+
   image:
     pullPolicy: IfNotPresent
     tag: latest
-    repository: 
+    repository:
 
   service:
     type: NodePort
@@ -63,12 +67,6 @@ world:
     requests:
       cpu: 100m
       memory: 256Mi
-
-  # Host paths for using map files extracted from WoW client
-  maps: /tmp
-  mmaps: /tmp
-  vmaps: /tmp
-  dbc: /tmp
 
   nodeSelector: {}
 
@@ -80,22 +78,22 @@ world:
 mysql:
   replicaCount: 1
 
-  rootPassword: ""  # leave empty to use secret
-  MySQLUser: ""          # leave empty to use secret
-  MySQLUserPassword: ""      # leave empty to use secret
+  rootPassword: "" # leave empty to use secret
+  MySQLUser: "" # leave empty to use secret
+  MySQLUserPassword: "" # leave empty to use secret
   database: mangos
   databaseRealmName: Karazhan
   serverVersion: 2
   dbRelease: Rel22
   rootHost: "%"
-  
+
   persistentVolume:
     enabled: false
     existingClaimName: ""
   image:
     pullPolicy: IfNotPresent
     tag: latest
-    repository: 
+    repository:
 
   service:
     type: ClusterIP
