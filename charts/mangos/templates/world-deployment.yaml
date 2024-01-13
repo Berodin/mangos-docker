@@ -27,14 +27,6 @@ spec:
         - name: wait-for-realmd
           image: busybox:latest
           command: ['sh', '-c', 'until nc -z {{ template "chart.fullname" . }}-realmd-service:3724; do echo waiting for db; sleep 2; done;']
-        - name: move-mangos-data
-          image: busybox:latest
-          command: ["/bin/sh", "-c", "ls -l /var/etc/mangos; ls -l /etc/mangos; cp -r /var/etc/mangos/* /etc/mangos/ && rm -rf /var/etc/mangos/*"]
-          volumeMounts:
-            - name: mangos-serverdata
-              mountPath: /etc/mangos
-            - name: var-etc-mangos
-              mountPath: /var/etc/mangos
 
       {{- end }}
       containers:
@@ -90,8 +82,6 @@ spec:
         - name: mangos-configdata
           persistentVolumeClaim:
             claimName: {{ .Values.world.persistentVolume.configdata.existingClaimName }}
-        - name: var-etc-mangos
-          emptyDir: {}
       {{- with .Values.world.nodeSelector }}
       nodeSelector:
 {{ toYaml . | indent 8 }}
