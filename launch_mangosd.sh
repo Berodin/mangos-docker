@@ -36,7 +36,7 @@ if [ -f /mangosconf/ahbot.conf ]; then
     echo "/mangosdconf/ahbot.conf is being used"
     AHCONFIG="-a /mangosconf/ahbot.conf"
 else
-    [ ! -f $CONFIGS/ahbot.conf ] && cp $CONFDIR/ahbot.conf $CONFIGS && AHCONFIG "-a $CONFIGS/ahbot.conf"
+    [ ! -f $CONFIGS/ahbot.conf ] && cp $CONFDIR/ahbot.conf.dist $CONFIGS/ahbot.conf && AHCONFIG="-a $CONFIGS/ahbot.conf"
 fi
 
 
