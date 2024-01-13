@@ -23,15 +23,23 @@ CHARACTER_DATABASE_INFO="${CHART_FULLNAME}-mysql-service;3306;${MYSQL_USER};${MY
 # case when /mangosconf is not specified
 cp $CONFDIR/* /tmp
 
+# Prüfe und verwende benutzerdefinierte Konfigurationen
 if [ -f /mangosconf/mangosd.conf ]; then
-	echo "/mangosconf/mangosd.conf is being used"
-	CONFIGS=/mangosconf
+    echo "/mangosconf/mangosd.conf is being used"
+    CONFIGS=/mangosconf
+else
+    # Kopiere Standardkonfigurationen, falls nicht vorhanden
+    [ ! -f $CONFIGS/mangosd.conf ] && cp $CONFDIR/mangosd.conf $CONFIGS
 fi
 
 if [ -f /mangosconf/ahbot.conf ]; then
-  echo "/mangosdconf/ahbot.conf is being used"
-  AHCONFIG="-a /mangosconf/ahbot.conf"
+    echo "/mangosdconf/ahbot.conf is being used"
+    AHCONFIG="-a /mangosconf/ahbot.conf"
+else
+    [ ! -f $CONFIGS/ahbot.conf ] && cp $CONFDIR/ahbot.conf $CONFIGS && AHCONFIG "-a $CONFIGS/ahbot.conf"
 fi
+
+
 # populate template with env vars
 sed -i 's,LoginDatabaseInfo.*=.*,LoginDatabaseInfo = '"$(echo $LOGIN_DATABASE_INFO | sed 's/[;&]/\\&/g')"',g' $CONFIGS/mangosd.conf
 sed -i 's,WorldDatabaseInfo.*=.*,WorldDatabaseInfo = '"$(echo $WORLD_DATABASE_INFO | sed 's/[;&]/\\&/g')"',g' $CONFIGS/mangosd.conf
