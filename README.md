@@ -32,37 +32,12 @@ To deploy, make any needed edits to the `values.yaml` file and apply using:
 helm install
 ```
 ## What about the maps?
-You will **not** find any maps (those resources are Blizzard's properties) in these Docker images, you will need to **provide it yourself** using several methods listed below.
 
-This can be done editing the `docker-compose.yml` file.
 ### Using Kubernetes
-Before creating the whole server, you will need to provide the path, from your host, to:
-* maps
-* vmaps
-* mmaps
-* dbc
 
-This can be done editing the `kubernetes-deployment.yml` file.
+The Dockerfile for mangosd creates the serverfiles in /var/etc/mangos and will later copy them to /etc/mangos via launch_mangosd.sh
 
-#### Using Helm
-Host paths can be set by editing the `values.yaml` file.
-
-## How to handle maps on Windows.
-* Place your maps in some directory on Windows, for example
-```
-c:/mangos_maps/maps
-c:/mangos_maps/vmaps
-c:/mangos_maps/mmaps
-c:/mangos_maps/dbc
-```
-* If you're using docker-compose modify volumes section to look like this
-```
- volumes:
-       - c:/mangos_maps/maps:/etc/mangos/maps
-       - c:/mangos_maps/vmaps:/etc/mangos/vmaps
-       - c:/mangos_maps/mmaps:/etc/mangos/mmaps
-       - c:/mangos_maps/dbc:/etc/mangos/dbc
-```
+So the solution is to create a PV in kubernetes, add the map folders there and mount the PV to /etc/mangos in the container.
 
 ## Contributing
 Feel free to create any issue or pull-request.
