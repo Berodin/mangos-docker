@@ -29,7 +29,7 @@ spec:
           command: ['sh', '-c', 'until nc -z {{ template "chart.fullname" . }}-realmd-service:3724; do echo waiting for db; sleep 2; done;']
         - name: move-mangos-data
           image: busybox:latest
-          command: ["/bin/sh", "-c", "cp -r /var/etc/mangos/* /etc/mangos/ && rm -rf /var/etc/mangos/*"]
+          command: ["/bin/sh", "-c", "ls -l /var/etc/mangos; ls -l /etc/mangos; cp -r /var/etc/mangos/* /etc/mangos/ && rm -rf /var/etc/mangos/*"]
           volumeMounts:
             - name: mangos-serverdata
               mountPath: /etc/mangos
