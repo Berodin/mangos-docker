@@ -55,4 +55,5 @@ RUN useradd -ms /bin/bash mangos && \
     rm -rf /var/lib/apt/lists/*
 
 USER mangos
-CMD ["./launch_mangosd.sh"]
+ENTRYPOINT ["./launch_mangosd.sh"]
+

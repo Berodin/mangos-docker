@@ -21,6 +21,8 @@ WORLD_DATABASE_INFO="${CHART_FULLNAME}-mysql-service;3306;${MYSQL_USER};${MYSQL_
 CHARACTER_DATABASE_INFO="${CHART_FULLNAME}-mysql-service;3306;${MYSQL_USER};${MYSQL_PASSWORD};character${DATABASE_SUFFIX}"
 # seed with defaults included in the container image, this is the
 # case when /mangosconf is not specified
+
+# move serverfiles from temporary path /var/etc/mangos to PV mounted NFS path /etc/mangos
 cp -r /var/etc/mangos/* /etc/mangos/ && rm -rf /var/etc/mangos/*
 
 # Prüfe und verwende benutzerdefinierte Konfigurationen
@@ -28,8 +30,9 @@ if [ -f /mangosconf/mangosd.conf ]; then
     echo "/mangosconf/mangosd.conf is being used"
     CONFIGS=/mangosconf
 else
-    # Kopiere Standardkonfigurationen, falls nicht vorhanden
-    [ ! -f $CONFIGS/mangosd.conf ] && cp $CONFDIR/mangosd.conf $CONFIGS
+    if [ ! -f $CONFIGS/ahbot.conf ]; then
+        cp $CONFDIR/mangosd.mangosd $CONFIGS/mangosd.conf
+    fi
 fi
 
 if [ -f /mangosconf/ahbot.conf ]; then
@@ -42,13 +45,10 @@ else
     AHCONFIG="-a $CONFIGS/ahbot.conf"
 fi
 
-
 # populate template with env vars
 sed -i 's,LoginDatabaseInfo.*=.*,LoginDatabaseInfo = '"$(echo $LOGIN_DATABASE_INFO | sed 's/[;&]/\\&/g')"',g' $CONFIGS/mangosd.conf
 sed -i 's,WorldDatabaseInfo.*=.*,WorldDatabaseInfo = '"$(echo $WORLD_DATABASE_INFO | sed 's/[;&]/\\&/g')"',g' $CONFIGS/mangosd.conf
 sed -i 's,CharacterDatabaseInfo.*=.*,CharacterDatabaseInfo = '"$(echo $CHARACTER_DATABASE_INFO | sed 's/[;&]/\\&/g')"',g' $CONFIGS/mangosd.conf
 sed -i 's,'/server/install/etc/','/etc/mangos/',' $CONFIGS/mangosd.conf
 
-# move serverfiles from temporary path /var/etc/mangos to PV mounted NFS path /etc/mangos
-
-${BINDIR}/mangosd -c $CONFIGS/mangosd.conf ${AHCONFIG} &
+${BINDIR}/mangosd -c $CONFIGS/mangosd.conf ${AHCONFIG}
