@@ -19,11 +19,15 @@ CONFIGS=/tmp
 LOGIN_DATABASE_INFO="${CHART_FULLNAME}-mysql-service;3306;${MYSQL_USER};${MYSQL_PASSWORD};realmd;${DATABASE_SUFFIX}"
 # seed with defaults included in the container image, this is the
 # case when /realmdconf is not specified
-cp $CONFDIR/* /tmp
+#cp $CONFDIR/* /tmp
 
 if [ -f /realmdconf/realmd.conf ]; then
 	echo "/realmdconf/realmd.conf is being used"
 	CONFIGS=/realmdconf
+else
+	if [ ! -f $CONFIGS/realmd.conf ]; then
+        cp $CONFDIR/realmd.conf $CONFIGS/realmd.conf
+    fi
 fi
 
 # populate template with env vars
