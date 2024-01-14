@@ -50,7 +50,7 @@ spec:
             - name: MANGOS_DATABASE_REALM_NAME
               value: "{{ .Values.mysql.databaseRealmName }}"
             - name: MANGOS_SERVER_VERSION
-              value: "{{ .Values.mysql.serverVersion }}"
+              value: "{{ .Values.wowVersion }}"
             - name: MANGOS_DB_RELEASE
               value: "{{ .Values.mysql.dbRelease }}"
             - name: MYSQL_ROOT_HOST

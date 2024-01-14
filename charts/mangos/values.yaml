@@ -83,7 +83,6 @@ mysql:
   MySQLUserPassword: "" # leave empty to use secret
   database: mangos
   databaseRealmName: Karazhan
-  serverVersion: 2
   dbRelease: Rel22
   rootHost: "%"
 
