@@ -21,7 +21,7 @@ WORLD_DATABASE_INFO="${CHART_FULLNAME}-mysql-service;3306;${MYSQL_USER};${MYSQL_
 CHARACTER_DATABASE_INFO="${CHART_FULLNAME}-mysql-service;3306;${MYSQL_USER};${MYSQL_PASSWORD};character${DATABASE_SUFFIX}"
 # seed with defaults included in the container image, this is the
 # case when /mangosconf is not specified
-cp $CONFDIR/* /tmp
+cp -r /var/etc/mangos/* /etc/mangos/ && rm -rf /var/etc/mangos/*
 
 # Prüfe und verwende benutzerdefinierte Konfigurationen
 if [ -f /mangosconf/mangosd.conf ]; then
@@ -50,5 +50,5 @@ sed -i 's,CharacterDatabaseInfo.*=.*,CharacterDatabaseInfo = '"$(echo $CHARACTER
 sed -i 's,'/server/install/etc/','/etc/mangos/',' $CONFIGS/mangosd.conf
 
 # move serverfiles from temporary path /var/etc/mangos to PV mounted NFS path /etc/mangos
-cp -r /var/etc/mangos/* /etc/mangos/ && rm -rf /var/etc/mangos/*
+
 ${BINDIR}/mangosd -c $CONFIGS/mangosd.conf ${AHCONFIG} &
