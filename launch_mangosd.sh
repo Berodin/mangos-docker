@@ -30,8 +30,8 @@ if [ -f /mangosconf/mangosd.conf ]; then
     echo "/mangosconf/mangosd.conf is being used"
     CONFIGS=/mangosconf
 else
-    if [ ! -f $CONFIGS/ahbot.conf ]; then
-        cp $CONFDIR/mangosd.mangosd $CONFIGS/mangosd.conf
+    if [ ! -f $CONFIGS/mangosd.conf ]; then
+        cp $CONFDIR/mangosd.conf $CONFIGS/mangosd.conf
     fi
 fi
 
