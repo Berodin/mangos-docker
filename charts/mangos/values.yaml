@@ -78,13 +78,9 @@ world:
 mysql:
   replicaCount: 1
 
-  rootPassword: "" # leave empty to use secret
-  MySQLUser: "" # leave empty to use secret
-  MySQLUserPassword: "" # leave empty to use secret
   database: mangos
   databaseRealmName: Karazhan
   dbRelease: Rel22
-  rootHost: "%"
 
   persistentVolume:
     enabled: false
