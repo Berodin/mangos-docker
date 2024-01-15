@@ -30,7 +30,7 @@ RUN cd server && \
 
 FROM ubuntu:22.04
 EXPOSE 3724
-WORKDIR /var/etc/mangos/
+WORKDIR /etc/mangos/
 
 # Installieren Sie benötigte Abhängigkeiten und fügen Sie das GCC 12 Repository hinzu
 RUN apt-get update && \

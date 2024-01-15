@@ -51,8 +51,10 @@ world:
     enabled: false
     serverdata:
       existingClaimName: ""
+      mountPath: ""
     configdata:
       existingClaimName: ""
+      mountPath: ""
 
   image:
     pullPolicy: IfNotPresent

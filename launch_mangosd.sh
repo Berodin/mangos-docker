@@ -24,7 +24,6 @@ CHARACTER_DATABASE_INFO="${CHART_FULLNAME}-mysql-service;3306;${MYSQL_USER};${MY
 
 # move serverfiles from temporary path /var/etc/mangos to PV mounted NFS path /etc/mangos
 cp -rp /var/etc/mangos/* /etc/mangos/ 
-find /var/etc/mangos/ ! -name 'launch_mangosd.sh' -exec rm -rf {} +
 
 # Prüfe und verwende benutzerdefinierte Konfigurationen
 if [ -f /mangosconf/mangosd.conf ]; then

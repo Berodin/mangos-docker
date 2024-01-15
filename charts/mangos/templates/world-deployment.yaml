@@ -58,9 +58,9 @@ spec:
               containerPort: 8085
           volumeMounts:
             - name: mangos-configdata
-              mountPath: /tmp
+              mountPath: {{ .Values.world.persistentVolume.configdata.mountPath }}
             - name: mangos-serverdata
-              mountPath: /etc/mangos
+              mountPath: {{ .Values.world.persistentVolume.serverdata.mountPath }}
           resources:
 {{ toYaml .Values.world.resources | indent 12 }}
       volumes:
