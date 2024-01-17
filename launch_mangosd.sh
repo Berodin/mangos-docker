@@ -23,7 +23,10 @@ CHARACTER_DATABASE_INFO="${CHART_FULLNAME}-mysql-service;3306;${MYSQL_USER};${MY
 # case when /mangosconf is not specified
 
 # move serverfiles from temporary path /var/etc/mangos to PV mounted NFS path /etc/mangos
-cp -rp /var/etc/mangos/* /etc/mangos/ 
+if [ ! -d /etc/mangos/maps ] && [ ! -d /etc/mangos/mmaps ] && [ ! -d /etc/mangos/vmaps ] && [ ! -d /etc/mangos/dbc ]; then
+    cp -rp /var/etc/mangos/* /etc/mangos/
+fi
+
 
 # Prüfe und verwende benutzerdefinierte Konfigurationen
 if [ -f /mangosconf/mangosd.conf ]; then
@@ -51,4 +54,4 @@ sed -i 's,WorldDatabaseInfo.*=.*,WorldDatabaseInfo = '"$(echo $WORLD_DATABASE_IN
 sed -i 's,CharacterDatabaseInfo.*=.*,CharacterDatabaseInfo = '"$(echo $CHARACTER_DATABASE_INFO | sed 's/[;&]/\\&/g')"',g' $CONFIGS/mangosd.conf
 sed -i 's,'/server/install/etc/','/etc/mangos/',' $CONFIGS/mangosd.conf
 
-exec ${BINDIR}/mangosd -c $CONFIGS/mangosd.conf ${AHCONFIG}
+screen -dmS mangosd ${BINDIR}/mangosd -c $CONFIGS/mangosd.conf ${AHCONFIG}
