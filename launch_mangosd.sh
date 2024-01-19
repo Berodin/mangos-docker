@@ -23,7 +23,7 @@ CHARACTER_DATABASE_INFO="${CHART_FULLNAME}-mysql-service;3306;${MYSQL_USER};${MY
 # case when /mangosconf is not specified
 
 # move serverfiles from temporary path /var/etc/mangos to PV mounted NFS path /etc/mangos
-rsync -av --no-perms /var/etc/mangos/ /etc/mangos/
+rsync -av --no-perms --no-group /var/etc/mangos/ /etc/mangos/
 
 # Prüfe und verwende benutzerdefinierte Konfigurationen
 if [ -f /mangosconf/mangosd.conf ]; then
