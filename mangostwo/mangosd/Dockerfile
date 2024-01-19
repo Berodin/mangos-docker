@@ -34,7 +34,7 @@ WORKDIR /etc/mangos/
 
 # Installieren Sie benötigte Abhängigkeiten und fügen Sie das GCC 12 Repository hinzu
 RUN apt-get update && \
-    apt-get install -y software-properties-common screen  && \
+    apt-get install -y software-properties-common supervisord  && \
     add-apt-repository ppa:ubuntu-toolchain-r/test && \
     apt-get update && \
     apt-get install -y gcc-12 g++-12 libstdc++6 libmariadb-dev libmariadb-dev-compat libmariadbd19 libmariadb3 libssl-dev wget
@@ -45,6 +45,7 @@ RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 60 --slave /u
 # Kopieren Sie die kompilierten Binärdateien und Konfigurationsdateien vom Builder
 COPY --from=builder /server/install/bin ./bin
 COPY --from=builder /server/install/etc ./conf
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Weitere Setup-Schritte
 RUN useradd -ms /bin/bash mangos && \
@@ -55,5 +56,5 @@ RUN useradd -ms /bin/bash mangos && \
     rm -rf /var/lib/apt/lists/*
 
 USER mangos
-ENTRYPOINT ["./launch_mangosd.sh"]
+ENTRYPOINT ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
 

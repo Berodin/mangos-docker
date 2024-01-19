@@ -55,5 +55,3 @@ sed -i 's,CharacterDatabaseInfo.*=.*,CharacterDatabaseInfo = '"$(echo $CHARACTER
 sed -i 's,'/server/install/etc/','/etc/mangos/',' $CONFIGS/mangosd.conf
 
 ${BINDIR}/mangosd -c $CONFIGS/mangosd.conf ${AHCONFIG}
-
-tail -f /dev/null
