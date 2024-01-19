@@ -1,264 +1,252 @@
 #!/bin/bash
+# Initializes and configures a MySQL database for a MANGOS server.
+# This includes setting up users and applying database updates.
+# Designed for Kubernetes with Persistent Volumes.
+
 set -eo pipefail
 shopt -s nullglob
 
-# if command starts with an option, prepend mysqld
-if [ "${1:0:1}" = '-' ]; then
-	set -- mysqld "$@"
-fi
-
-# skip setup if they want an option that stops mysqld
-wantHelp=
-for arg; do
-	case "$arg" in
-		-'?'|--help|--print-defaults|-V|--version)
-			wantHelp=1
-			break
-			;;
-	esac
-done
-
-# usage: file_env VAR [DEFAULT]
-#    ie: file_env 'XYZ_DB_PASSWORD' 'example'
-# (will allow for "$XYZ_DB_PASSWORD_FILE" to fill in the value of
-#  "$XYZ_DB_PASSWORD" from a file, especially for Docker's secrets feature)
-file_env() {
-	local var="$1"
-	local fileVar="${var}_FILE"
-	local def="${2:-}"
-	if [ "${!var:-}" ] && [ "${!fileVar:-}" ]; then
-		echo >&2 "error: both $var and $fileVar are set (but are exclusive)"
-		exit 1
-	fi
-	local val="$def"
-	if [ "${!var:-}" ]; then
-		val="${!var}"
-	elif [ "${!fileVar:-}" ]; then
-		val="$(< "${!fileVar}")"
-	fi
-	export "$var"="$val"
-	unset "$fileVar"
+LOG_FILE="/tmp/logfile.log"
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$LOG_FILE"
 }
 
-_check_config() {
-	toRun=( "$@" --verbose --help )
-	if ! errors="$("${toRun[@]}" 2>&1 >/dev/null)"; then
-		cat >&2 <<-EOM
+log "Starting script execution."
 
-			ERROR: mysqld failed while attempting to check config
-			command was: "${toRun[*]}"
+# Default values for environment variables
+MYSQL_PRIVILEGED_USER="mysql"
+MYSQL_PRIVILEGED_USER_PASSWORD=${MYSQL_PRIVILEGED_USER_PASSWORD:-"changeit"}
+MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-"mangos"}
+MYSQL_USER=${MYSQL_USER:-"mangos"}
+MYSQL_PASSWORD=${MYSQL_PASSWORD:-"mangos"}
+MYSQL_DATABASE=${MYSQL_DATABASE:-"mangos"}
+MANGOS_DATABASE_REALM_NAME=${MANGOS_DATABASE_REALM_NAME:-"Karazhan"}
+MANGOS_SERVER_VERSION=${MANGOS_SERVER_VERSION:-2}
+MANGOS_DB_RELEASE=${MANGOS_DB_RELEASE:-"Rel22"}
+MYSQL_ROOT_HOST=${MYSQL_ROOT_HOST:-"%"}
+MYSQL_INFOSCHEMA_USER=mysql.infoschema
+MYSQL_INFOSCHEMA_PASS="${MYSQL_INFOSCHEMA_PASS:-changeit}"
+MANGOS_WORLD_DB=mangos${MANGOS_SERVER_VERSION:-2}
+MANGOS_CHARACTER_DB=character${MANGOS_SERVER_VERSION:-2}
 
-			$errors
-		EOM
-		exit 1
-	fi
+# Check and set permissions for log file
+setup_log_file() {
+    chmod 777 /tmp
+    touch "$LOG_FILE"
+    chown mysql:mysql "$LOG_FILE"
+    chmod 660 "$LOG_FILE"
 }
 
-# Fetch value from server config
-# We use mysqld --verbose --help instead of my_print_defaults because the
-# latter only show values present in config files, and not server defaults
-_get_config() {
-	local conf="$1"; shift
-	"$@" --verbose --help --log-bin-index="$(mktemp -u)" 2>/dev/null | awk '$1 == "'"$conf"'" { print $2; exit }'
+# Fetch configuration value
+get_config() {
+    local conf="$1"
+    local value=$("mysqld" --verbose --help 2>/dev/null | grep "^$conf" | awk '{ print $2; exit }')
+    if [ -z "$value" ]; then
+        log "Error: Unable to fetch configuration for $conf"
+        exit 1
+    fi
+    echo $value
 }
 
-# allow the container to be started with `--user`
-if [ "$1" = 'mysqld' -a -z "$wantHelp" -a "$(id -u)" = '0' ]; then
-	_check_config "$@"
-	DATADIR="$(_get_config 'datadir' "$@")"
-	mkdir -p "$DATADIR"
-	chown -R mysql:mysql "$DATADIR"
-	exec gosu mysql "$BASH_SOURCE" "$@"
-fi
+# Set permissions for the data directory
+set_datadir_permissions() {
+    local DATADIR="$1"
+    log "Setting permissions for the data directory."
+    chown -R mysql:mysql "$DATADIR"
+}
 
-if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
-	# still need to check config, container may have started with --user
-	_check_config "$@"
-	# Get config
-	DATADIR="$(_get_config 'datadir' "$@")"
+# Initialize MariaDB Database
+initialize_db() {
+    if [ ! -d "$DATADIR/mysql" ]; then
+        mariadb-install-db --user=mysql
+        log "MariaDB system tables initialized."
+    else
+        log "MariaDB system tables already exist."
+    fi
+}
 
+start_mysql_server() {
+    local socket="$1"
+    mysqld --socket="$socket" > /tmp/mysqld.log 2>&1 &
+    pid=$!
+    log "MariaDB server started with PID $pid"
+	
+	sleep 10
+	
 	if [ ! -d "$DATADIR/mysql" ]; then
-		file_env 'MYSQL_ROOT_PASSWORD'
-		if [ -z "$MYSQL_ROOT_PASSWORD" -a -z "$MYSQL_ALLOW_EMPTY_PASSWORD" -a -z "$MYSQL_RANDOM_ROOT_PASSWORD" ]; then
-			echo >&2 'error: database is uninitialized and password option is not specified '
-			echo >&2 '  You need to specify one of MYSQL_ROOT_PASSWORD, MYSQL_ALLOW_EMPTY_PASSWORD and MYSQL_RANDOM_ROOT_PASSWORD'
-			exit 1
-		fi
-
-		mkdir -p "$DATADIR"
-
-		echo 'Initializing database'
-		"$@" --initialize-insecure
-		echo 'Database initialized'
-
-		if command -v mysql_ssl_rsa_setup > /dev/null && [ ! -e "$DATADIR/server-key.pem" ]; then
-			# https://github.com/mysql/mysql-server/blob/23032807537d8dd8ee4ec1c4d40f0633cd4e12f9/packaging/deb-in/extra/mysql-systemd-start#L81-L84
-			echo 'Initializing certificates'
-			mysql_ssl_rsa_setup --datadir="$DATADIR"
-			echo 'Certificates initialized'
-		fi
-
-		SOCKET="$(_get_config 'socket' "$@")"
-		"$@" --skip-networking --socket="${SOCKET}" &
-		pid="$!"
-
-		mysql=( mysql --protocol=socket -uroot -hlocalhost --socket="${SOCKET}" )
-
-		for i in {30..0}; do
-			if echo 'SELECT 1' | "${mysql[@]}" &> /dev/null; then
-				break
-			fi
-			echo 'MySQL init process in progress...'
-			sleep 1
-		done
-		if [ "$i" = 0 ]; then
-			echo >&2 'MySQL init process failed.'
-			exit 1
-		fi
-
-		if [ -z "$MYSQL_INITDB_SKIP_TZINFO" ]; then
-			# sed is for https://bugs.mysql.com/bug.php?id=20545
-			mysql_tzinfo_to_sql /usr/share/zoneinfo | sed 's/Local time zone must be set--see zic manual page/FCTY/' | "${mysql[@]}" mysql
-		fi
-
-		if [ ! -z "$MYSQL_RANDOM_ROOT_PASSWORD" ]; then
-			export MYSQL_ROOT_PASSWORD="$(pwgen -1 32)"
-			echo "GENERATED ROOT PASSWORD: $MYSQL_ROOT_PASSWORD"
-		fi
-
-		rootCreate=
-		# default root to listen for connections from anywhere
-		file_env 'MYSQL_ROOT_HOST' '%'
-		if [ ! -z "$MYSQL_ROOT_HOST" -a "$MYSQL_ROOT_HOST" != 'localhost' ]; then
-			# no, we don't care if read finds a terminating character in this heredoc
-			# https://unix.stackexchange.com/questions/265149/why-is-set-o-errexit-breaking-this-read-heredoc-expression/265151#265151
-			read -r -d '' rootCreate <<-EOSQL || true
-				CREATE USER 'root'@'${MYSQL_ROOT_HOST}' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}' ;
-				GRANT ALL ON *.* TO 'root'@'${MYSQL_ROOT_HOST}' WITH GRANT OPTION ;
-			EOSQL
-		fi
-
-		"${mysql[@]}" <<-EOSQL
-			-- What's done in this file shouldn't be replicated
-			--  or products like mysql-fabric won't work
-			SET @@SESSION.SQL_LOG_BIN=0;
-
-			DELETE FROM mysql.user WHERE user NOT IN ('mysql.sys', 'mysqlxsys', 'root') OR host NOT IN ('localhost') ;
-			SET PASSWORD FOR 'root'@'localhost'=PASSWORD('${MYSQL_ROOT_PASSWORD}') ;
-			GRANT ALL ON *.* TO 'root'@'localhost' WITH GRANT OPTION ;
-			${rootCreate}
-			DROP DATABASE IF EXISTS test ;
-			FLUSH PRIVILEGES ;
-		EOSQL
-
-		if [ ! -z "$MYSQL_ROOT_PASSWORD" ]; then
-			mysql+=( -p"${MYSQL_ROOT_PASSWORD}" )
-		fi
-
-		#file_env 'MYSQL_DATABASE'
-		#if [ "$MYSQL_DATABASE" ]; then
-			#echo "CREATE DATABASE IF NOT EXISTS \`$MYSQL_DATABASE\` ;" | "${mysql[@]}"
-			#mysql+=( "$MYSQL_DATABASE" )
-		#fi
-
-		file_env 'MYSQL_USER'
-		file_env 'MYSQL_PASSWORD'
-		if [ "$MYSQL_USER" -a "$MYSQL_PASSWORD" ]; then
-			echo "CREATE USER '$MYSQL_USER'@'%' IDENTIFIED BY '$MYSQL_PASSWORD' ;" | "${mysql[@]}"
-
-			if [ "$MYSQL_DATABASE" ]; then
-				echo "GRANT ALL ON \`$MYSQL_DATABASE\`.* TO '$MYSQL_USER'@'%' ;" | "${mysql[@]}"
-			fi
-
-			echo 'FLUSH PRIVILEGES ;' | "${mysql[@]}"
-		fi
-
-		echo
-
-    echo "WORLD DATABASE CREATION..."
-		if [ -z "$MANGOS_SERVER_VERSION" ]; then
-			echo >&2 '  You need to specify MANGOS_SERVER_VERSION in order to initialize the database'
-			exit 1
-		fi
-		if [ -z "$MANGOS_DB_RELEASE" ]; then
-			echo >&2 '  You need to specify MANGOS_DB_RELEASE in order to initialize the database'
-			exit 1
-		fi
-		if [ "$MANGOS_SERVER_VERSION" -eq 4 ]; then
-			MANGOS_WORLD_DB=mangos4
-			MANGOS_CHARACTER_DB=character4
-		elif [ "$MANGOS_SERVER_VERSION" -eq 3 ]; then
-			MANGOS_WORLD_DB=mangos3
-			MANGOS_CHARACTER_DB=character3
-		elif [ "$MANGOS_SERVER_VERSION" -eq 2 ]; then
-			MANGOS_WORLD_DB=mangos2
-			MANGOS_CHARACTER_DB=character2
-		elif [ "$MANGOS_SERVER_VERSION" -eq 1 ]; then
-			MANGOS_WORLD_DB=mangos1
-			MANGOS_CHARACTER_DB=character1
-		else
-			MANGOS_WORLD_DB=mangos0
-			MANGOS_CHARACTER_DB=character0
-		fi
-
-    "${mysql[@]}" < /database/World/Setup/mangosdCreateDB.sql
-    "${mysql[@]}" -D${MANGOS_WORLD_DB} < /database/World/Setup/mangosdLoadDB.sql
-    for f in /database/World/Setup/FullDB/*; do
-      echo "$0: running $f"; "${mysql[@]}" -D${MANGOS_WORLD_DB} < "$f";
-    done
-		echo "APPLYING UPDATES..."
-		for f in /database/World/Updates/*/*.sql; do
-      echo "$0: running $f"; "${mysql[@]}" -D${MANGOS_WORLD_DB} < "$f";
-    done
-    echo "WORLD DATABASE CREATED."
-    echo "CHARACTER DATABASE CREATION..."
-    "${mysql[@]}" < /database/Character/Setup/characterCreateDB.sql
-    "${mysql[@]}"  -D${MANGOS_CHARACTER_DB} < /database/Character/Setup/characterLoadDB.sql
-		echo "APPLYING UPDATES..."
-		for f in /database/Character/Updates/*/*.sql; do
-      echo "$0: running $f"; "${mysql[@]}" -D${MANGOS_CHARACTER_DB} < "$f";
-    done
-    echo "CHARACTER DATABASE CREATED."
-    echo "REALM DATABASE CREATION..."
-	"${mysql[@]}" <<-EOSQL
-		CREATE DATABASE realmd DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
-		GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, ALTER, LOCK TABLES ON \`realmd\`.* TO 'mangos'@'%';
-		FLUSH PRIVILEGES;
-	EOSQL
-    "${mysql[@]}" -Drealmd < /database/Realm/Setup/realmdLoadDB.sql
-    echo "APPLYING UPDATES..."
-    for f in /database/Realm/Updates/*/*.sql; do
-        echo "$0: running $f"; "${mysql[@]}" -Drealmd < "$f";
-    done
-	"${mysql[@]}" -Drealmd <<-EOSQL
-		INSERT INTO realmlist (name,realmbuilds) VALUES ('${MANGOS_DATABASE_REALM_NAME}','12340') ;
-	EOSQL
-    echo "REALM DATABASE CREATED."
-
-		for f in /docker-entrypoint-initdb.d/*; do
-			case "$f" in
-				*.sh)     echo "$0: running $f"; . "$f" ;;
-				*.sql)    echo "$0: running $f"; "${mysql[@]}" < "$f"; echo ;;
-				*.sql.gz) echo "$0: running $f"; gunzip -c "$f" | "${mysql[@]}"; echo ;;
-				*)        echo "$0: ignoring $f" ;;
-			esac
-			echo
-		done
-
-		if [ ! -z "$MYSQL_ONETIME_PASSWORD" ]; then
-			"${mysql[@]}" <<-EOSQL
-				ALTER USER 'root'@'%' PASSWORD EXPIRE;
-			EOSQL
-		fi
-		if ! kill -s TERM "$pid" || ! wait "$pid"; then
-			echo >&2 'MySQL init process failed.'
-			exit 1
-		fi
-
-		echo
-		echo 'MySQL init process done. Ready for start up.'
-		echo
+		local mysql_command=( mysql --protocol=socket -u"$MYSQL_PRIVILEGED_USER" -hlocalhost --socket="$socket" )
+	else
+		local mysql_command=( mysql --protocol=socket -u"$MYSQL_PRIVILEGED_USER" -p"$MYSQL_PRIVILEGED_USER_PASSWORD" -hlocalhost --socket="$socket" )
 	fi
-fi
+	
+    for i in {30..0}; do
+        if echo 'SELECT 1' | "${mysql_command[@]}" &> /dev/null; then
+            log "MariaDB server is ready."
+            return
+        fi
+        sleep 1
+    done
+    log "Error: MariaDB server failed to start"
+    exit 1
+}
 
-exec "$@"
+# Create users and set permissions
+setup_users_and_permissions() {
+    log "Setting up users and permissions."
+	
+	mysql_command=( mysql --protocol=socket -u${MYSQL_PRIVILEGED_USER} -hlocalhost --socket="$1")
+    #set password for db user mysql
+    "${mysql_command[@]}" <<-EOSQL
+        ALTER USER 'mysql'@'localhost' IDENTIFIED BY '${MYSQL_PRIVILEGED_USER_PASSWORD}';
+        FLUSH PRIVILEGES;
+EOSQL
+	
+    local mysql_command=( mysql --protocol=socket -u${MYSQL_PRIVILEGED_USER} -p${MYSQL_PRIVILEGED_USER_PASSWORD} -hlocalhost --socket="$1" )
+
+    # Root user setup
+    log "Creating root user." 
+    "${mysql_command[@]}" <<-EOSQL 2>&1 | tee -a "$LOG_FILE"
+        ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
+        GRANT ALL ON *.* TO 'root'@'localhost' WITH GRANT OPTION;
+        DROP DATABASE IF EXISTS test;
+        FLUSH PRIVILEGES;
+EOSQL
+
+    # Application user setup
+    log "Creating application user: $MYSQL_USER." 
+    "${mysql_command[@]}" <<-EOSQL 2>&1 | tee -a "$LOG_FILE"
+        CREATE USER '$MYSQL_USER'@'%' IDENTIFIED BY '$MYSQL_PASSWORD';
+        GRANT ALL ON \`$MYSQL_DATABASE\`.* TO '$MYSQL_USER'@'%';
+        FLUSH PRIVILEGES;
+EOSQL
+
+    # infoschema user setup
+    log "Creating infoschema user: $MYSQL_INFOSCHEMA_USER."
+    "${mysql_command[@]}" <<-EOSQL 2>&1 | tee -a "$LOG_FILE"
+        CREATE USER '$MYSQL_INFOSCHEMA_USER'@'localhost' IDENTIFIED BY '$MYSQL_INFOSCHEMA_PASS';
+        GRANT SELECT ON mysql.* TO '$MYSQL_INFOSCHEMA_USER'@'localhost';
+        FLUSH PRIVILEGES;
+EOSQL
+}
+
+# Function to load data into a specific database
+load_data_into_database() {
+    local database_directory="$1"
+    local database_name="$2"
+    local database_script_name="$3"
+    local socket="$4"
+    local mysql_command=( mysql --protocol=socket -u"$MYSQL_PRIVILEGED_USER" -p"$MYSQL_PRIVILEGED_USER_PASSWORD" -hlocalhost --socket="$socket" )
+
+    if [ -d "$database_directory" ]; then
+        log "Loading data into $database_name database."
+
+        # Load database creation script if exists
+        local db_create_script="$database_directory/${database_script_name}CreateDB.sql"
+        log "Creation Script: $db_create_script"
+        if [ -f "$db_create_script" ]; then
+            log "Creation Script: $db_create_script found and will be executed"
+            "${mysql_command[@]}" < "$db_create_script"
+        fi
+
+        # Load database initial data script if exists
+        local db_load_script="$database_directory/${database_script_name}LoadDB.sql"
+        log "Loader Script: $db_load_script"
+        if [ -f "$db_load_script" ]; then
+            "${mysql_command[@]}" -D"$database_name" < "$db_load_script"
+        fi
+
+        # Load additional data from specific directory
+        local additional_data_dir="$database_directory/FullDB"
+        if [ -d "$additional_data_dir" ]; then
+            for f in $(find "$additional_data_dir" -name '*.sql' | sort); do
+                log "Applying data file: $f"
+                "${mysql_command[@]}" -D"$database_name" < "$f"
+            done
+        fi
+    else
+        log "Warning: Directory $database_directory does not exist. Skipping data load for $database_name."
+    fi
+}
+
+# Load database schemas and data
+load_database_data() {
+    local socket="$1"
+    load_data_into_database "/database/World/Setup" "mangos${MANGOS_SERVER_VERSION}" "mangosd" "$socket"
+    load_data_into_database "/database/Character/Setup" "character${MANGOS_SERVER_VERSION}" "character" "$socket"
+
+    # Handle realmd separately due to its unique structure
+    local mysql_command=( mysql --protocol=socket -u"$MYSQL_PRIVILEGED_USER" -p"$MYSQL_PRIVILEGED_USER_PASSWORD" -hlocalhost --socket="$socket" )
+    "${mysql_command[@]}" <<-EOSQL
+        CREATE DATABASE IF NOT EXISTS realmd DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
+        GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, ALTER, LOCK TABLES ON \`realmd\`.* TO 'mangos'@'%';
+        FLUSH PRIVILEGES;
+EOSQL
+    log "Loading data into realmd database."
+    "${mysql_command[@]}" -Drealmd < "/database/Realm/Setup/realmdLoadDB.sql"
+}
+# Apply database updates in sorted order
+apply_updates() {
+    local socket="$1"
+    local mysql_command=( mysql --protocol=socket -u"$MYSQL_PRIVILEGED_USER" -p"$MYSQL_PRIVILEGED_USER_PASSWORD" -hlocalhost --socket="$socket" )
+
+    # Function to apply updates from a directory
+    apply_updates_from_directory() {
+        local directory="$1"
+        local database="$2"
+        for f in $(find "$directory" -name '*.sql' | sort); do
+            log "Applying update: $f"
+            "${mysql_command[@]}" -D"$database" < "$f"
+        done
+    }
+
+    apply_updates_from_directory "/Realm_DB/Updates/Rel21" "realmd"
+    apply_updates_from_directory "/database/Realm/Updates/Rel22" "realmd"
+    apply_updates_from_directory "/database/Character/Updates" "$MANGOS_CHARACTER_DB"
+    apply_updates_from_directory "/database/World/Updates" "$MANGOS_WORLD_DB"
+    log "All database updates applied."
+}
+
+add_reamlist() {
+    log "Add realmlist ${MANGOS_DATABASE_REALM_NAME} to realmd"
+	local mysql_command=( mysql --protocol=socket -u${MYSQL_PRIVILEGED_USER} -p${MYSQL_PRIVILEGED_USER_PASSWORD} -hlocalhost --socket="$1" )
+    "${mysql_command[@]}" -Drealmd <<-EOSQL
+		INSERT INTO realmlist (name,realmbuilds) VALUES ('${MANGOS_DATABASE_REALM_NAME}','12340') ;
+EOSQL
+
+}
+
+main() {
+    DATADIR=$(get_config 'datadir')
+    SOCKET=$(get_config 'socket')
+    log "Data directory: $DATADIR, Socket: $SOCKET"
+
+    # script needs to run with user mysql except for chown on datadir, so after that we switch the user with gosu and restart the script
+    if [ "$(id -u)" = '0' ]; then
+        setup_log_file
+        chown -R mysql:mysql "$DATADIR"
+        log "Executing script with gosu as mysql user"
+        exec gosu mysql "$0" "$@"
+    fi
+
+    # check whether DB init is needed
+    if [ ! -d "$DATADIR/mysql" ]; then
+        initialize_db
+		# Start MariaDB
+		start_mysql_server "$SOCKET"
+        setup_users_and_permissions "$SOCKET"
+        load_database_data "$SOCKET"
+        add_reamlist "$SOCKET"
+	else
+		# No initialization needed, just start the DB and apply updates
+		log "DB is already initialized, just applying updates if applicable."
+		start_mysql_server "$SOCKET"
+    fi
+
+    # Always try to apply updates (if new image with new content was pulled)
+    apply_updates "$SOCKET"
+
+    log 'MySQL process complete. Ready for start up.'
+    wait $pid
+}
+
+main "$@"

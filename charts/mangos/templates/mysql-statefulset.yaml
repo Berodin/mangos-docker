@@ -30,26 +30,48 @@ spec:
                 secretKeyRef:
                   name: "mangos-secret"
                   key: "MYSQL_ROOT_PASSWORD"
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mangos-secret
+                  key: MYSQL_USER
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mangos-secret
+                  key: MYSQL_PASSWORD
+            - name: MYSQL_PRIVILEGED_USER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mangos-secret
+                  key: MYSQL_PRIVILEGED_USER_PASSWORD   
+            - name: MYSQL_DATABASE
+              value: "{{ .Values.mysql.database }}"
+            - name: MANGOS_DATABASE_REALM_NAME
+              value: "{{ .Values.mysql.databaseRealmName }}"
+            - name: MANGOS_SERVER_VERSION
+              value: "{{ .Values.wowVersion }}"
+            - name: MANGOS_DB_RELEASE
+              value: "{{ .Values.mysql.dbRelease }}"
+            - name: MYSQL_ROOT_HOST
+              value: "{{ .Values.mysql.rootHost }}"
+            - name: MYSQL_INFOSCHEMA_USER
+              valueFrom:
+                secretKeyRef:
+                  name: "mangos-secret"
+                  key: "MYSQL_INFOSCHEMA_USER"
+            - name: MYSQL_INFOSCHEMA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "mangos-secret"
+                  key: "MYSQL_INFOSCHEMA_PASSWORD"
           ports:
             - name: mysql
               containerPort: 3306
           volumeMounts:
-            - name: data
+            - name: mysql-data
               mountPath: /var/lib/mysql
               subPath: mysql
-          livenessProbe:
-            tcpSocket:
-              port: 3306
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 5
-          readinessProbe:
-            tcpSocket:
-              port: 3306
-            initialDelaySeconds: 30
-            periodSeconds: 15
-            timeoutSeconds: 5
-            failureThreshold: 20
           resources:
 {{ toYaml .Values.mysql.resources | indent 12 }}
     {{- with .Values.mysql.nodeSelector }}
@@ -64,11 +86,7 @@ spec:
       tolerations:
 {{ toYaml . | indent 8 }}
     {{- end }}
-  volumeClaimTemplates:
-  - metadata:
-      name: data
-    spec:
-      accessModes: ["ReadWriteOnce"]
-      resources:
-        requests:
-          storage: {{ .Values.mysql.storage }}
+      volumes:
+      - name: mysql-data
+        persistentVolumeClaim:
+          claimName: {{ .Values.mysql.persistentVolume.existingClaimName }}

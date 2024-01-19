@@ -11,7 +11,7 @@ spec:
   type: {{ .Values.world.service.type }}
   ports:
     - port: {{ .Values.world.service.port }}
-      targetPort: 3724
+      targetPort: 8085
       protocol: TCP
       name: "mangos-world"
   selector:

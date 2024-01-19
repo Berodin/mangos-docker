@@ -22,62 +22,54 @@ spec:
       {{- if .Values.world.initContainer.enabled }}
       initContainers:
         - name: wait-for-db
-          image: curlimages/curl:latest
-          command: ['sh', '-c', 'until curl -s {{ template "chart.fullname" . }}-mysql-service:3306; do echo waiting for db; sleep 2; done;']
+          image: busybox:latest
+          command: ['sh', '-c', 'until nc -z {{ template "chart.fullname" . }}-mysql-service:3306; do echo waiting for db; sleep 2; done;']
         - name: wait-for-realmd
-          image: curlimages/curl:latest
-          command: ['sh', '-c', 'until curl -s {{ template "chart.fullname" . }}-realmd-service:3724; do echo waiting for realmd; sleep 2; done;']
+          image: busybox:latest
+          command: ['sh', '-c', 'until nc -z {{ template "chart.fullname" . }}-realmd-service:3724; do echo waiting for db; sleep 2; done;']
+
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}-world
           image: "{{ .Values.world.image.repository }}:{{ .Values.world.image.tag }}"
           imagePullPolicy: {{ .Values.world.image.pullPolicy }}
           env:
-            - name: LOGIN_DATABASE_INFO
+            - name: CHART_FULLNAME
+              value: {{ template "chart.fullname" . }}
+            - name: DATABASE_SUFFIX
+              value: "{{ .Values.wowVersion }}"
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mangos-secret
+                  key: "MYSQL_ROOT_PASSWORD"
+            - name: MYSQL_USER          
               valueFrom:
                 secretKeyRef:
                   name: "mangos-secret"
-                  key: "LOGIN_DATABASE_INFO"
-            - name: WORLD_DATABASE_INFO
+                  key: "MYSQL_USER"
+            - name: MYSQL_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: "mangos-secret"
-                  key: "WORLD_DATABASE_INFO"
-            - name: CHARACTER_DATABASE_INFO
-              valueFrom:
-                secretKeyRef:
-                  name: "mangos-secret"
-                  key: "CHARACTER_DATABASE_INFO"
+                  key: "MYSQL_PASSWORD"
           ports:
             - name: "mangos-world"
               containerPort: 8085
-          livenessProbe:
-            tcpSocket:
-              port: 8085
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 5
-          readinessProbe:
-            tcpSocket:
-              port: 8085
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 5
+          volumeMounts:
+            - name: mangos-configdata
+              mountPath: {{ .Values.world.persistentVolume.configdata.mountPath }}
+            - name: mangos-serverdata
+              mountPath: {{ .Values.world.persistentVolume.serverdata.mountPath }}
           resources:
 {{ toYaml .Values.world.resources | indent 12 }}
       volumes:
-        - name: mangos-maps
-          hostPath:
-            path: {{ .Values.world.maps }}
-        - name: mangos-vmaps
-          hostPath:
-            path: {{ .Values.world.mmaps }}
-        - name: mangos-mmaps
-          hostPath:
-            path: {{ .Values.world.vmaps }}
-        - name: mangos-dbc
-          hostPath:
-            path: {{ .Values.world.dbc }}
+        - name: mangos-serverdata
+          persistentVolumeClaim:
+            claimName: {{ .Values.world.persistentVolume.serverdata.existingClaimName }}
+        - name: mangos-configdata
+          persistentVolumeClaim:
+            claimName: {{ .Values.world.persistentVolume.configdata.existingClaimName }}
       {{- with .Values.world.nodeSelector }}
       nodeSelector:
 {{ toYaml . | indent 8 }}

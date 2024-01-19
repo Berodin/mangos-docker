@@ -1,6 +1,6 @@
 FROM gcc:12.3.0 as builder
 ARG MANGOS_SERVER_VERSION=master
-ARG THREAD_COUNT="-j6"
+ARG THREAD_COUNT="-j7"
 ARG CMAKE_VERSION="3.22.1"
 ENV GIT_HTTP_LOW_SPEED_LIMIT 0
 ENV GIT_HTTP_TRANSFER_TIMEOUT 1200
@@ -30,12 +30,11 @@ RUN cd server && \
 
 FROM ubuntu:22.04
 EXPOSE 3724
-ENV LOGIN_DATABASE_INFO=127.0.0.1;3306;root;mangos;realmd
-WORKDIR /etc/mangos/
+WORKDIR /var/etc/mangos/
 
 # Installieren Sie benötigte Abhängigkeiten und fügen Sie das GCC 12 Repository hinzu
 RUN apt-get update && \
-    apt-get install -y software-properties-common && \
+    apt-get install -y software-properties-common rsync && \
     add-apt-repository ppa:ubuntu-toolchain-r/test && \
     apt-get update && \
     apt-get install -y gcc-12 g++-12 libstdc++6 libmariadb-dev libmariadb-dev-compat libmariadbd19 libmariadb3 libssl-dev wget
@@ -49,15 +48,12 @@ COPY --from=builder /server/install/etc ./conf
 
 # Weitere Setup-Schritte
 RUN useradd -ms /bin/bash mangos && \
-    wget --no-check-certificate https://raw.githubusercontent.com/Berodin/mangos-docker/master/launch_mangosd.sh && \
+    wget --no-check-certificate https://raw.githubusercontent.com/Berodin/mangos-docker/test/launch_mangosd.sh && \
     chmod -R a+x . && \
     mv conf/mangosd.conf.dist conf/mangosd.conf && \
-    sed -i 's|^LoginDatabaseInfo            =.*$|LoginDatabaseInfo            = LOGIN_DATABASE_INFO|' conf/mangosd.conf && \
-    sed -i 's|^WorldDatabaseInfo            =.*$|WorldDatabaseInfo            = WORLD_DATABASE_INFO|' conf/mangosd.conf && \
-    sed -i 's|^CharacterDatabaseInfo        =.*$|CharacterDatabaseInfo        = CHARACTER_DATABASE_INFO|' conf/mangosd.conf && \
-    sed -i 's|/server/install/etc/|/etc/mangos/|' conf/mangosd.conf && \
     chown -R mangos:mangos . && \
     rm -rf /var/lib/apt/lists/*
 
 USER mangos
-CMD ["./launch_mangosd.sh"]
+ENTRYPOINT ["./launch_mangosd.sh"]
+

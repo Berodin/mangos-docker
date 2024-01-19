@@ -22,34 +22,40 @@ spec:
       {{- if .Values.realmd.initContainer.enabled }}
       initContainers:
         - name: wait-for-db
-          image: curlimages/curl:latest
-          command: ['sh', '-c', 'until curl -s {{ template "chart.fullname" . }}-mysql-service:3306; do echo waiting for db; sleep 2; done;']
+          image: busybox:latest
+          command: ['sh', '-c', 'until nc -z {{ template "chart.fullname" . }}-mysql-service:3306; do echo waiting for db; sleep 2; done; sleep 120;']
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}-realmd
           image: "{{ .Values.realmd.image.repository }}:{{ .Values.realmd.image.tag }}"
           imagePullPolicy: {{ .Values.realmd.image.pullPolicy }}
           env:
-            - name: LOGIN_DATABASE_INFO
+            - name: CHART_FULLNAME
+              value: {{ template "chart.fullname" . }}
+            - name: DATABASE_SUFFIX
+              value: "{{ .Values.wowVersion }}"
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mangos-secret
+                  key: "MYSQL_ROOT_PASSWORD"
+            - name: MYSQL_USER          
               valueFrom:
                 secretKeyRef:
                   name: "mangos-secret"
-                  key: "LOGIN_DATABASE_INFO"
+                  key: "MYSQL_USER"
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "mangos-secret"
+                  key: "MYSQL_PASSWORD"
           ports:
             - name: "mangos-realmd"
               containerPort: 3724
-          livenessProbe:
-            tcpSocket:
-              port: 3724
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 5
-          readinessProbe:
-            tcpSocket:
-              port: 3724
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 5
+          volumeMounts:
+            - name: mangos-realm
+              mountPath: /tmp
+          command: 
           resources:
 {{ toYaml .Values.realmd.resources | indent 12 }}
     {{- with .Values.realmd.nodeSelector }}
@@ -64,3 +70,7 @@ spec:
       tolerations:
 {{ toYaml . | indent 8 }}
     {{- end }}
+      volumes:
+      - name: mangos-realm
+        persistentVolumeClaim:
+          claimName: {{ .Values.realmd.persistentVolume.existingClaimName }}
