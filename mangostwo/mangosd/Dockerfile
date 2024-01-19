@@ -30,7 +30,7 @@ RUN cd server && \
 
 FROM ubuntu:22.04
 EXPOSE 3724
-WORKDIR /etc/mangos/
+WORKDIR /var/etc/mangos/
 
 # Installieren Sie benötigte Abhängigkeiten und fügen Sie das GCC 12 Repository hinzu
 RUN apt-get update && \
@@ -56,5 +56,5 @@ RUN useradd -ms /bin/bash mangos && \
     rm -rf /var/lib/apt/lists/*
 
 USER mangos
-ENTRYPOINT ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+ENTRYPOINT ["./launch_mangosd.sh"]
 
