@@ -23,25 +23,21 @@ CHARACTER_DATABASE_INFO="${CHART_FULLNAME}-mysql-service;3306;${MYSQL_USER};${MY
 # case when /mangosconf is not specified
 
 # move serverfiles from temporary path /var/etc/mangos to PV mounted NFS path /etc/mangos
-rsync -av /var/etc/mangos/ /etc/mangos/
+rsync -av --no-perms /var/etc/mangos/ /etc/mangos/
 
 # Prüfe und verwende benutzerdefinierte Konfigurationen
 if [ -f /mangosconf/mangosd.conf ]; then
     echo "/mangosconf/mangosd.conf is being used"
     CONFIGS=/mangosconf
 else
-    if [ ! -f $CONFIGS/mangosd.conf ]; then
-        cp -p $CONFDIR/mangosd.conf $CONFIGS/mangosd.conf
-    fi
+    rsync -av --ignore-existing $CONFDIR/mangosd.conf $CONFIGS/mangosd.conf
 fi
 
 if [ -f /mangosconf/ahbot.conf ]; then
     echo "/mangosdconf/ahbot.conf is being used"
     AHCONFIG="-a /mangosconf/ahbot.conf"
 else
-    if [ ! -f $CONFIGS/ahbot.conf ]; then
-        cp -p $CONFDIR/ahbot.conf.dist $CONFIGS/ahbot.conf
-    fi
+    rsync -av --ignore-existing $CONFDIR/ahbot.conf.dist $CONFIGS/ahbot.conf
     AHCONFIG="-a $CONFIGS/ahbot.conf"
 fi
 
